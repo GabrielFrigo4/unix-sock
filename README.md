@@ -19,7 +19,7 @@
 
  A **API de Sockets** que usamos hoje em quase todos os sistemas operacionais (incluindo Linux e Windows) foi introduzida originalmente no **4.2BSD** em 1983. Desenvolver no FreeBSD é trabalhar no ambiente "nativo" onde a comunicação em rede via Unix foi concebida e refinada.
 
- > **Referência Oficial:** [FreeBSD Handbook - Sockets Programming](https://docs.freebsd.org/en/books/developers-handbook/sockets/)
+ > **Referência Oficial:** [FreeBSD Developers Handbook - Sockets Programming](https://docs.freebsd.org/en/books/developers-handbook/sockets/)
 
 ## **Vantagens Técnicas e Arquiteturais**
  * **A Pilha de Rede (Network Stack):** O FreeBSD é amplamente reconhecido por ter uma das pilhas TCP/IP mais limpas, estáveis e performáticas do mundo, sendo a base para infraestruturas de gigantes como Netflix e WhatsApp.
