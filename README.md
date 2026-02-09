@@ -1,135 +1,68 @@
-# RC_Project
- Um projeto de Redes de Computadores (UFABC) que é implementar o Protocolo HTTP usando C + Socket + Unix (FreeBSD)
+# **Projeto: Implementação de um Web Server HTTP (C/Unix)**
 
-# Download FreeBSD
- ```sh
- #!/bin/sh
+## **O Projeto**
+ Este projeto acadêmico foca na construção de um servidor web robusto e em conformidade com as especificações do **HTTP/1.1**. Diferente de implementações básicas, este servidor não apenas serve arquivos, mas gerencia o ciclo de vida completo de recursos através da implementação de múltiplos métodos de requisição:
 
- # Stop on Error
- set -e 
+ * **GET**: Recuperação de recursos estáticos e dinâmicos.
+ * **POST**: Criação de novos recursos e submissão de formulários/dados via `stdin`.
+ * **PUT & PATCH**: Atualização total e parcial de recursos no sistema de arquivos do servidor, exigindo lógica de controle de concorrência e permissões.
+ * **DELETE**: Remoção segura de recursos.
 
- # Environment FreeBSD
- FREEBSD_URL="https://download.freebsd.org/releases/amd64/amd64/ISO-IMAGES"
- FREEBSD_VER=$(curl -s "$FREEBSD_URL/" | sed -n 's/.*href="\([0-9]\+\.[0-9]\+\)\/".*/\1/p' | sort -V | tail -n 1)
- ISO_NAME="FreeBSD-$FREEBSD_VER-RELEASE-amd64-disc1.iso.xz"
+ A implementação utiliza a **API de Sockets de Berkeley**, exigindo uma gestão manual e rigorosa de memória (malloc/free), manipulação de strings (parsing de headers) e controle de descritores de arquivos para garantir que o servidor seja performático e resiliente a *memory leaks*.
 
- # Download FreeBSD
- curl -o "FreeBSD.iso.xz" "$FREEBSD_URL/$FREEBSD_VER/$ISO_NAME"
+---
 
- # Verify Checksum
- curl -s "$FREEBSD_URL/$FREEBSD_VER/CHECKSUM.SHA256-FreeBSD-$FREEBSD_VER-RELEASE-amd64" | \
-     grep "$ISO_NAME" | awk '{print $4 "  FreeBSD.iso.xz"}' | sha256sum -c -
+# **Por que FreeBSD?**
 
- # Extract FreeBSD
- unxz -f "FreeBSD.iso.xz"
- ```
+## **A Origem Histórica: O Berço dos Sockets**
+ A escolha do FreeBSD não é meramente estética ou por "dificuldade". Historicamente, o **BSD (Berkeley Software Distribution)** foi o berço da pilha de protocolos TCP/IP moderna.
 
-# Install FreeBSD
- ```sh
- #!/bin/sh
- ```
+ A **API de Sockets** que usamos hoje em quase todos os sistemas operacionais (incluindo Linux e Windows) foi introduzida originalmente no **4.2BSD** em 1983. Desenvolver no FreeBSD é trabalhar no ambiente "nativo" onde a comunicação em rede via Unix foi concebida e refinada.
 
-# Configuring FreeBSD
- ```sh
- #!/bin/sh
+ > **Referência Oficial:** [FreeBSD Handbook - Sockets Programming](https://docs.freebsd.org/en/books/developers-handbook/sockets/)
 
- ### ################################################################################################################################
+## **Vantagens Técnicas e Arquiteturais**
+ * **A Pilha de Rede (Network Stack):** O FreeBSD é amplamente reconhecido por ter uma das pilhas TCP/IP mais limpas, estáveis e performáticas do mundo, sendo a base para infraestruturas de gigantes como Netflix e WhatsApp.
+ * **kqueue (Event Notification):** Enquanto o Linux utiliza o `epoll`, o FreeBSD oferece o **`kqueue`**. É uma interface de notificação de eventos escalável e extremamente eficiente que permite ao servidor monitorar milhares de conexões simultâneas com baixo overhead de CPU.
+ * **Jails e Isolamento:** Para um servidor HTTP, o FreeBSD oferece o conceito de `Jails`, permitindo rodar o processo do servidor em um ambiente de virtualização a nível de sistema operacional, aumentando drasticamente a segurança contra exploits de rede.
+ * **Documentação (Man Pages):** A documentação técnica do FreeBSD (`man sockets`, `man 2 bind`) é frequentemente citada como superior e mais precisa que a de suas contrapartes, facilitando o desenvolvimento de software de sistema de baixo nível.
 
- ### ################################
- ### Setup Shell
- ### ################################
+---
 
- # Config Shell
- cat << 'EOF' | tee -a "$HOME/.shrc" | sudo tee -a "/root/.shrc" > "/dev/null"
- ### ################################
- ### SHELL ENVIRONMENT
- ### ################################
+## **Destaques da Implementação Técnica**
+ Para garantir alta performance e conformidade com os padrões de sistemas Unix-like, o servidor foi construído sobre três pilares fundamentais:
 
- os_version=$(freebsd-version)
- sh_name=$(ps -p $$ -o comm=)
- if [ "$(id -u)" -eq 0 ]; then
- 	usr_color="\033[1;31m"
- else
- 	usr_color="\033[1;32m"
- fi
- export PS1="
- \033[0;33m\033[1;31m \033[1;35m${os_version}\033[0;33m─\033[1;34m \033[1;35m${sh_name}\033[0;33m
- \033[0;33m┌──❮ \033[1;33m \033[1;36m\w\033[0;33m ❯─ ❮\033[1;34m ${usr_color}\u\033[0;33m❯
- \033[0;33m└─\033[1;34m\033[0m "
+### ⚡ **Gerenciamento de Concorrência de Baixo Nível**
+ * **Modelo orientado a eventos (kqueue):** Diferente do modelo *thread-per-connection*, utilizamos a interface `kqueue(2)` e `kevent(2)` nativa do FreeBSD para monitorar múltiplos descritores de arquivos. Isso permite uma escalabilidade eficiente com consumo mínimo de memória.
+ * **Non-blocking I/O:** Implementação de sockets em modo não-bloqueante, garantindo que o servidor nunca fique ocioso aguardando uma operação de rede lenta.
 
- ### ################################
- ### SHELL ALIAS
- ### ################################
+### 🧩 **Parsing de Protocolo via Máquina de Estados (FSM)**
+ * **Reconstrução de Fluxo:** Implementação de uma **Máquina de Estados Finitos** para processar o fluxo de bytes bruto vindo do socket. Isso permite tratar requisições fragmentadas ou ataques de *Slowloris* de forma resiliente.
+ * **Análise de Headers:** Parsing manual de cabeçalhos HTTP/1.1 (como `Content-Length`, `Transfer-Encoding` e `Connection: keep-alive`), evitando o overhead de bibliotecas de alto nível e garantindo controle total sobre a memória.
 
- ### ################################
- ### SHELL CONFIGURATION
- ### ################################
- EOF
+### 💾 **Persistência e Manipulação de I/O**
+ * **Gestão de Recursos:** Lógica robusta para os métodos de escrita (**PUT**, **PATCH** e **POST**), incluindo o tratamento de permissões de sistema de arquivos Unix e concorrência na escrita de arquivos.
+ * **Zero-Copy:** Uso potencial de `sendfile(2)` para otimizar a entrega de arquivos estáticos, movendo dados diretamente do cache do kernel para o socket, sem passar pelo espaço do usuário.
 
- ### ################################
- ### Setup Zsh
- ### ################################
+---
 
- # Zsh
- sudo pkg install --yes zsh
- zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+# **Recursos e Documentação Oficial**
+ Para garantir a integridade do desenvolvimento, utilizamos a documentação oficial do FreeBSD como **Single Source of Truth (SSoT)**.
 
- # Zsh
- su -
- zsh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
- exit
+## 🌐 **Consulta Online (Web)**
+ *Melhor para busca indexada e navegação rápida entre capítulos.*
 
- # Config Zsh
- cat << 'EOF' | tee -a "$HOME/.zshrc" | sudo tee -a "/root/.zshrc" > "/dev/null"
- ### ################################
- ### SHELL OPTIONS SETUP
- ### ################################
+ * **[FreeBSD Books](https://docs.freebsd.org/en/books/)**: O hub central para livros e artigos técnicos.
+ * **[FreeBSD Handbook](https://docs.freebsd.org/en/books/handbook/)**: O "guia definitivo" para instalação e administração.
+ * **[FreeBSD Developers Handbook](https://docs.freebsd.org/en/books/developers-handbook/)**: Essencial para **programação de sockets**, chamadas de sistema e arquitetura do kernel.
+ * **[FreeBSD FAQ](https://docs.freebsd.org/en/books/faq/)**: Respostas para as dúvidas mais comuns sobre o SO.
+ * **[FreeBSD Manual Pages](https://man.freebsd.org/)**: Referência direta de comandos e funções da biblioteca C.
 
- # History OPTIONS
- setopt SHARE_HISTORY
- setopt HIST_IGNORE_DUPS
- setopt HIST_IGNORE_SPACE
- setopt HIST_REDUCE_BLANKS
+## 📄 **Download Offline (PDF)**
+ *Ideal para ambientes isolados (air-gapped) ou leitura focada sem distrações.*
 
- # Globbing & Expansion OPTIONS
- setopt EXTENDED_GLOB
- setopt GLOB_DOTS
- setopt PROMPT_SUBST
-
- # Interaction OPTIONS
- setopt CORRECT
- setopt INTERACTIVE_COMMENTS
- unsetopt BEEP
-
- # Navigation OPTIONS
- setopt AUTO_CD
-
- ### ################################
- ### SHELL ENVIRONMENT
- ### ################################
-
- os_version=$(freebsd-version)
- sh_name=$(ps -p $$ -o comm=)
- if [ "$(id -u)" -eq 0 ]; then
- 	usr_color="%B%F{red}"
- else
- 	usr_color="%B%F{green}"
- fi
- export PROMPT=$'
- %b%F{yellow}%B%F{red} %F{magenta}${os_version}%b%F{yellow}─%B%F{blue} %F{magenta}${sh_name}%b%F{yellow}
- %b%F{yellow}┌──❮ %B%F{green} %*%b%F{yellow} ❯─❮ %B%F{green} %D{%d/%m/%y}%b%F{yellow} ❯─❮ %B%F{yellow} %B%F{cyan}%c%b%F{yellow} ❯─ ❮%B%F{blue} ${usr_color}%n%b%F{yellow}❯
- %b%F{yellow}└─%B%F{blue}%f%b '
-
- ### ################################
- ### SHELL FUNCTIONS
- ### ################################
-
- ### ################################
- ### SHELL ALIAS
- ### ################################
-
- ### ################################
- ### SHELL CONFIGURATION
- ### ################################
- EOF
- ```
+ | Recurso | Link de Download | Comando Rápido (curl) |
+ | --- | --- | --- |
+ | **FreeBSD Handbook** | [PDF](https://download.freebsd.org/doc/en/books/handbook/handbook_en.pdf) | `curl -O https://download.freebsd.org/doc/en/books/handbook/handbook_en.pdf` |
+ | **FreeBSD Developers Handbook** | [PDF](https://download.freebsd.org/doc/en/books/developers-handbook/developers-handbook_en.pdf) | `curl -O https://download.freebsd.org/doc/en/books/developers-handbook/developers-handbook_en.pdf` |
+ | **FreeBSD FAQ** | [PDF](https://download.freebsd.org/doc/en/books/faq/faq_en.pdf) | `curl -O https://download.freebsd.org/doc/en/books/faq/faq_en.pdf` |
