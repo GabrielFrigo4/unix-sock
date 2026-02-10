@@ -61,11 +61,11 @@
 ## 📥 **Download Offline (PDF)**
  *Ideal para ambientes isolados (air-gapped) ou leitura focada sem distrações.*
 
- | Recurso | Link de Download | Comando Rápido (curl) |
- | --- | --- | --- |
- | **FreeBSD Handbook** | [PDF](https://download.freebsd.org/doc/en/books/handbook/handbook_en.pdf) | `curl -O https://download.freebsd.org/doc/en/books/handbook/handbook_en.pdf` |
- | **FreeBSD Developers Handbook** | [PDF](https://download.freebsd.org/doc/en/books/developers-handbook/developers-handbook_en.pdf) | `curl -O https://download.freebsd.org/doc/en/books/developers-handbook/developers-handbook_en.pdf` |
- | **FreeBSD FAQ** | [PDF](https://download.freebsd.org/doc/en/books/faq/faq_en.pdf) | `curl -O https://download.freebsd.org/doc/en/books/faq/faq_en.pdf` |
+ | Recurso | Ler Online | Link Direto |
+ | :--- | :---: | :---: |
+ | **FreeBSD Handbook** | [📄 Visualizar](https://download.freebsd.org/doc/en/books/handbook/handbook_en.pdf) | [📥 **Baixar PDF**](https://download.freebsd.org/doc/en/books/handbook/handbook_en.pdf) |
+ | **Developers Handbook** | [📄 Visualizar](https://download.freebsd.org/doc/en/books/developers-handbook/developers-handbook_en.pdf) | [📥 **Baixar PDF**](https://download.freebsd.org/doc/en/books/developers-handbook/developers-handbook_en.pdf) |
+ | **FreeBSD FAQ** | [📄 Visualizar](https://download.freebsd.org/doc/en/books/faq/faq_en.pdf) | [📥 **Baixar PDF**](https://download.freebsd.org/doc/en/books/faq/faq_en.pdf) |
 
 ---
 
