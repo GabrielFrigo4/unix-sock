@@ -1,14 +1,14 @@
 # 😈 **Recursos FreeBSD**
 
 ## 📂 **Visão Geral**
- Este diretório centraliza todos os recursos específicos para o ambiente de desenvolvimento FreeBSD, divididos entre documentação teórica e automação de ambiente.
+ Este diretório centraliza todos os recursos essenciais para o ambiente de desenvolvimento FreeBSD, divididos de forma clara entre documentação teórica de sistema e automação de infraestrutura.
 
 ## 🗂️ **Estrutura do Diretório**
- | Diretório | Descrição |
- | :--- | :--- |
- | **[`/Books`](./Books/)** | Biblioteca offline com manuais oficiais (Handbook, FAQ, Developers Guide). |
- | **[`/Scripts`](./Scripts/)** | Scripts em Shell (`sh`) para download da ISO, verificação e configuração do ambiente (pós-instalação). |
+ | 📁 Diretório | 📝 Descrição | 🎯 Foco |
+ | :--- | :--- | :--- |
+ | [**`/Books`**](./Books/) | Acervo offline contendo **9 manuais oficiais** do FreeBSD (incluindo o *Handbook*, *Developers' Handbook* e o design do *4.4BSD*). Referência rápida para System Calls, IPC e Sockets. | Base Teórica e Consulta |
+ | [**`/Scripts`**](./Scripts/) | Automação em Shell (`sh`) para download da ISO, verificação de integridade e rotinas de pós-instalação (bootstrap do ambiente de desenvolvimento). | Automação e Setup |
 
 ---
 
-> **Nota:** O foco aqui é garantir que o ambiente base esteja configurado corretamente para suportar o desenvolvimento do Servidor Web em C.
+> ⚙️ **Nota:** O objetivo principal desta estrutura é garantir que o sistema base esteja perfeitamente configurado, atualizado e documentado para suportar o desenvolvimento de um Servidor Web nativo em C.

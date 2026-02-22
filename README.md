@@ -75,11 +75,17 @@
 ## 📚 **Livros (PDF Offline)**
  Estes arquivos estão localizados na pasta [`FreeBSD/Books/`](./FreeBSD/Books/).
 
- | Documento | Link Local | Descrição |
+ | 📄 Documento | 🔗 Link Local | 📝 Descrição |
  | :--- | :--- | :--- |
- | **FreeBSD Handbook** | **[Handbook.pdf](./FreeBSD/Books/Handbook.pdf)** | Guia de administração e uso geral. |
- | **Developers Handbook** | **[Developers Handbook.pdf](./FreeBSD/Books/Developers%20Handbook.pdf)** | Guia focado em Sockets e Kernel. |
- | **FreeBSD FAQ** | **[FAQ.pdf](./FreeBSD/Books/FAQ.pdf)** | Perguntas frequentes. |
+ | **FreeBSD Handbook** | **[`FreeBSD Handbook.pdf`](./FreeBSD/Books/FreeBSD%20Handbook.pdf)** | O guia definitivo de instalação, administração e uso geral do sistema. |
+ | **FreeBSD Developers' Handbook** | **[`FreeBSD Developers' Handbook.pdf`](./FreeBSD/Books/FreeBSD%20Developers'%20Handbook.pdf)** | Guia avançado focado em programação de Kernel, Sockets e IPC. |
+ | **FreeBSD Architecture Handbook** | **[`FreeBSD Architecture Handbook.pdf`](./FreeBSD/Books/FreeBSD%20Architecture%20Handbook.pdf)** | Detalhes profundos sobre a estrutura e os subsistemas do kernel. |
+ | **Design and Implementation of 4.4BSD** | **[`The Design and Implementation of the 4.4BSD Operating System.pdf`](./FreeBSD/Books/The%20Design%20and%20Implementation%20of%20the%204.4BSD%20Operating%20System.pdf)** | Livro clássico sobre a base de design do 4.4BSD (origem do FreeBSD). |
+ | **FreeBSD Porter’s Handbook** | **[`FreeBSD Porter’s Handbook.pdf`](./FreeBSD/Books/FreeBSD%20Porter’s%20Handbook.pdf)** | Guia oficial para criar "ports" e empacotar softwares de terceiros. |
+ | **FreeBSD FAQ** | **[`Frequently Asked Questions for FreeBSD.pdf`](./FreeBSD/Books/Frequently%20Asked%20Questions%20for%20FreeBSD.pdf)** | Perguntas frequentes e soluções rápidas de problemas comuns. |
+ | **FreeBSD Documentation Primer** | **[`FreeBSD Documentation Project Primer for New Contributors.pdf`](./FreeBSD/Books/FreeBSD%20Documentation%20Project%20Primer%20for%20New%20Contributors.pdf)** | Manual para novos contribuidores do projeto de documentação oficial. |
+ | **FreeBSD Project Model** | **[`A project model for the FreeBSD Project.pdf`](./FreeBSD/Books/A%20project%20model%20for%20the%20FreeBSD%20Project.pdf)** | Estudo sobre a estrutura organizacional e governança do projeto. |
+ | **FreeBSD Accessibility Handbook** | **[`FreeBSD Accessibility Handbook.pdf`](./FreeBSD/Books/FreeBSD%20Accessibility%20Handbook.pdf)** | Guia de utilização e configuração de recursos de acessibilidade. |
 
 ## ⚙️ **Scripts de Configuração**
  Scripts utilitários localizados na pasta [`FreeBSD/Scripts/`](./FreeBSD/Scripts/) para auxiliar na preparação do ambiente.
