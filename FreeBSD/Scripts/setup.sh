@@ -175,8 +175,9 @@ cd ~
 sudo chsh -s "$(which sh)" "$(whoami)"
 sudo chsh -s "$(which sh)" "root"
 
-# Config Shell
-cat << 'EOF' | tee -a "${HOME}/.shrc" | sudo tee -a "/root/.shrc" > "/dev/null"
+# Kgx Config
+KGX_BLOCK="$(mktemp)"
+cat << 'EOF' > "${KGX_BLOCK}"
 ### ################################
 ### KGX ENVIRONMENT
 ### ################################
@@ -189,12 +190,21 @@ if [ -z "${KGX_INIT}" ]; then
 	if [ -x "${KGX_SHELL}" ]; then
 		export SHELL="${KGX_SHELL}"
 		unset KGX_INIT KGX_SHELL
+		clear
 		exec "${SHELL}"
 	else
 		unset KGX_INIT KGX_SHELL
 	fi
 fi
+EOF
+touch "${HOME}/.shrc"
+cat "${KGX_BLOCK}" "${HOME}/.shrc" > "${HOME}/.shrc.tmp" && mv "${HOME}/.shrc.tmp" "${HOME}/.shrc"
+sudo touch "/root/.shrc"
+sudo cat "${KGX_BLOCK}" "/root/.shrc" | sudo tee "/root/.shrc.tmp" > /dev/null && sudo mv "/root/.shrc.tmp" "/root/.shrc"
+rm "${KGX_BLOCK}"
 
+# Config Shell
+cat << 'EOF' | tee -a "${HOME}/.shrc" | sudo tee -a "/root/.shrc" > "/dev/null"
 ### ################################
 ### SHELL ENVIRONMENT
 ### ################################
