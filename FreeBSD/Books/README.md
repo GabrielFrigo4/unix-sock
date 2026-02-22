@@ -11,4 +11,4 @@
 
 ---
  
- > 🔗 **Fonte Oficial:** [FreeBSD Documentation Project](https://docs.freebsd.org/en/)
+> 🔗 **Fonte Oficial:** [FreeBSD Documentation Project](https://docs.freebsd.org/en/)

@@ -24,4 +24,4 @@
 
 ---
 
- > **Requisito:** Este projeto foi otimizado para rodar sobre o Kernel do FreeBSD, aproveitando a estabilidade da pilha TCP/IP nativa.
+> **Requisito:** Este projeto foi otimizado para rodar sobre o Kernel do FreeBSD, aproveitando a estabilidade da pilha TCP/IP nativa.

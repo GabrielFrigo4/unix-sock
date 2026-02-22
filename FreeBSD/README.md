@@ -11,4 +11,4 @@
 
 ---
 
- > **Nota:** O foco aqui é garantir que o ambiente base esteja configurado corretamente para suportar o desenvolvimento do Servidor Web em C.
+> **Nota:** O foco aqui é garantir que o ambiente base esteja configurado corretamente para suportar o desenvolvimento do Servidor Web em C.
