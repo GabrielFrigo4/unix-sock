@@ -75,9 +75,9 @@ sudo mv /usr/local/share/xsessions/gnome-classic-xorg.desktop /usr/local/share/x
 sudo mv /usr/local/share/wayland-sessions/gnome-classic.desktop /usr/local/share/wayland-sessions/gnome-classic.desktop.bak
 sudo mv /usr/local/share/wayland-sessions/gnome-classic-wayland.desktop /usr/local/share/wayland-sessions/gnome-classic-wayland.desktop.bak
 
-################################
-# System Environment
-################################
+### ################################
+### System Environment
+### ################################
 
 # SHORTCUT
 gsettings set "org.gnome.desktop.wm.keybindings"                "show-desktop"  "[]"
@@ -86,9 +86,9 @@ gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "calculator"    
 gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "www"           "['<Control><Alt>g']"
 gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "search"        "['<Control><Alt>f']"
 
-################################
-# Custom Settings
-################################
+### ################################
+### Custom Settings
+### ################################
 
 # CREATE LAUNCHER FUNCTION
 create_launcher() {
@@ -574,9 +574,9 @@ sudo pkg install --yes neovim
 # Window Editor
 sudo pkg install --yes emacs
 
-################################
-# Setup Emacs Config
-################################
+### ################################
+### Setup Emacs Config
+### ################################
 
 # Remove Lixo
 rm -rf "${HOME}/.emacs" 2> "/dev/null"
@@ -634,9 +634,9 @@ EOF
 # Update Doom Emacs
 ~/.config/emacs/bin/doom upgrade
 
-################################
-# Setup NeoVim Config
-################################
+### ################################
+### Setup NeoVim Config
+### ################################
 
 # Remove Lixo
 rm -rf "${HOME}/.config/nvim" 2> "/dev/null"
