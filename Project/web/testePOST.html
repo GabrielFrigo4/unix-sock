@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de POST</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+    <h2>Testando o Método POST</h2>
+
+    <form id="meuFormulario">
+        <label for="mensagem">Digite uma mensagem para o servidor C:</label><br><br>
+        <input type="text" id="mensagem" name="mensagem" size="40" required>
+        <button type="submit">Enviar via POST</button>
+    </form>
+
+    <br>
+    <p id="respostaServidor" style="color: green; font-weight: bold;"></p>
+
+    <script>
+        // Intercepta o clique no botão "Enviar"
+        document.getElementById('meuFormulario').addEventListener('submit', function(evento) {
+            evento.preventDefault(); // Evita que a página pisque/recarregue
+
+            // Pega o texto digitado no input
+            const textoDigitado = document.getElementById('mensagem').value;
+
+            // Monta a string de dados que será o "corpo" do POST
+            const dadosParaEnviar = "conteudo=" + encodeURIComponent(textoDigitado);
+
+            // A função fetch() é quem monta e envia a requisição HTTP pelo navegador
+            fetch('/enviar-dados', {
+                method: 'POST', 
+                headers: {
+                    // Avisa o servidor C que estamos enviando dados de formulário em texto
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: dadosParaEnviar // Aqui vai o conteudo que ira aparecer apos o \r\n\r\n
+            })
+            .then(resposta => resposta.text()) // Aguarda o "200 OK" do servidor C
+            .then(texto => {
+                // Exibe a mensagem que o servidor C mandou de volta
+                document.getElementById('respostaServidor').innerText = texto;
+            })
+            .catch(erro => console.error("Erro na comunicação:", erro));
+        });
+    </script>
+</body>
+</html>

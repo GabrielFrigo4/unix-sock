@@ -15,10 +15,7 @@
  Para compilar o projeto (certifique-se de ter o `clang` ou `gcc` instalado):
 
  ```sh
- # Compilar
  make
-
- # Executar
  ./webserver
  ```
 
