@@ -22,7 +22,7 @@
  ```sh
  ./downlaod.sh
  ./install.sh
- ./uninstall.sh
  ./connect.sh
  ./setup.sh
+ ./uninstall.sh
  ```
