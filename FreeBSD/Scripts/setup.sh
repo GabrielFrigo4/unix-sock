@@ -45,7 +45,6 @@ sysrc kld_list+="vmmw_guest_kmod"
 
 # KVM/QEMU
 pkg install --yes qemu-guest-agent
-pkg install --yes spice-vdagent
 pkg install --yes drm-kmod
 sysrc qemu_guest_agent_enable="YES"
 sysrc spice_vdagentd_enable="YES"
