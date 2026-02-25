@@ -156,6 +156,7 @@ rm "${HOME}/.gitconfig"
 git config --global credential.helper "!gh auth git-credential"
 git config --global user.email "gabriel.frigo4@gmail.com"
 git config --global user.name "Gabriel Frigo"
+git config --global init.defaultBranch "main"
 git config --global pull.rebase false
 git config --global color.ui auto
 
