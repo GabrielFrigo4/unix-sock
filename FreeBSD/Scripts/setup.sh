@@ -151,15 +151,18 @@ sudo pkg install --yes curl
 sudo pkg install --yes git
 sudo pkg install --yes git-credential-oauth
 
-# GITHUB
-sudo pkg install --yes gh
-gh auth login
-
 # SETUP
-git config --global credential.helper oauth
+rm "${HOME}/.gitconfig"
+git config --global credential.helper "!gh auth git-credential"
 git config --global user.email "gabriel.frigo4@gmail.com"
 git config --global user.name "Gabriel Frigo"
 git config --global pull.rebase false
+git config --global color.ui auto
+
+# GITHUB
+sudo pkg install --yes gh
+gh auth login
+gh auth setup-git
 
 ### ################################
 ### Setup Ports
