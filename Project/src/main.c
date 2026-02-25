@@ -4,28 +4,24 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-// Importando nossos módulos
-#include "../inc/main.h"
-#include "../inc/boot.h"
-#include "../inc/server.h"
+#include "main.h"
+#include "boot.h"
+#include "server.h"
 
 int main() {
-    // Inicia o servidor e pega o descritor
-    int serv_file_desc = iniciar_servidor(PORTA);
+    int serv_file_desc = boot_server(PORTA);
 
-    while (1) {
-        struct sockaddr_in6 cliente;
-        socklen_t c = sizeof(cliente);
-        int novo_socket = accept(serv_file_desc, (struct sockaddr *)&cliente, &c);
-        
+    int novo_socket;
+    struct sockaddr_in cliente;
+    socklen_t c = sizeof(cliente);
+    while ((novo_socket = accept(serv_file_desc, (struct sockaddr *)&cliente, &c))) {
         if (novo_socket < 0) {
             perror("Erro no accept");
-            continue; 
+            continue;
         }
         printf("Novo socket criado: %d\n", novo_socket);
 
-        // Processa o HTTP
-        processar_requisicao(novo_socket);
+        handle_request(novo_socket);
 
         close(novo_socket);
         printf("Novo socket encerrado.\n\n");
