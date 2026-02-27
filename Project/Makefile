@@ -1,4 +1,4 @@
-CC      := clang
+CC      := cc
 CFLAGS  := -Wall -Wextra -std=c23 -I./inc
 TARGET  := server
 
@@ -10,27 +10,26 @@ SOURCES := $(wildcard $(SRCDIR)/*.c)
 HEADERS := $(wildcard $(INCDIR)/*.h)
 OBJECTS := $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SOURCES))
 
-all:
-	@$(MAKE) clear
-	@$(MAKE) build
-	@$(MAKE) run
+.PHONY: all
+all: build
 
+.PHONY: build
 build: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $^ -o $@
-	@echo "✅ Compilação do executável '$(TARGET)' concluída!"
+	@echo "✅ Executável '$(TARGET)' Gerado com Sucesso!"
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(HEADERS)
 	@mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+.PHONY: run
 run: build
-	@echo "🚀 Executando..."
+	@echo "🚀 Iniciando Servidor..."
 	./$(TARGET)
 
+.PHONY: clear clean
 clear clean:
 	@rm -rf $(OBJDIR) $(TARGET)
-	@echo "🧹 Arquivos limpos!"
-
-.PHONY: all build run clear clean
+	@echo "🧹 Ambiente Limpo (Objetos e Binários Removidos)."

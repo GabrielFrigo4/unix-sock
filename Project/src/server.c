@@ -8,7 +8,8 @@
 
 #define STATIC_DIR "./web/"
 
-static void send_http_response(int socket, const char *status, const char *content_type, const char *corpo) {
+static void send_http_response(int socket, const char *status, const char *content_type, const char *corpo)
+{
     char resposta[1024];
     snprintf(resposta, sizeof(resposta),
              "HTTP/1.1 %s\r\n"
@@ -22,54 +23,66 @@ static void send_http_response(int socket, const char *status, const char *conte
     send(socket, resposta, strlen(resposta), 0);
 }
 
-void handle_request(int novo_socket) {
+void handle_request(int novo_socket)
+{
     char metodo[10] = {0}, caminho[256] = {0}, versao[20] = {0};
     char buffer[2048] = {0};
 
-    int bytes_recebidos = recv(novo_socket, buffer, sizeof(buffer)-1, 0);
-    if (bytes_recebidos <= 0) {
-        if (bytes_recebidos < 0) perror("Erro na leitura do cliente");
-        else printf("Cliente desconectou.\n");
+    int bytes_recebidos = recv(novo_socket, buffer, sizeof(buffer) - 1, 0);
+    if (bytes_recebidos <= 0)
+    {
+        if (bytes_recebidos < 0)
+            perror("[ERR]: Error reading from client");
+        else
+            printf("[WARN]: Client disconnected.\n");
         return;
     }
 
     buffer[bytes_recebidos] = '\0';
     sscanf(buffer, "%9s %255s %19s", metodo, caminho, versao);
-    printf("Método: %s | Caminho: %s\n", metodo, caminho);
+    printf("[INFO]: Method: %s | Path: %s\n", metodo, caminho);
 
-    if (strstr(caminho, "..") != NULL) {
-        send_http_response(novo_socket, "403 Forbidden", "text/plain", "Acesso Negado.");
+    if (strstr(caminho, "..") != NULL)
+    {
+        send_http_response(novo_socket, "403 Forbidden", "text/plain", "Access Denied.");
         return;
     }
 
     char *corpo = strstr(buffer, "\r\n\r\n");
-    if (corpo) corpo += 4;
+    if (corpo)
+        corpo += 4;
 
-    if (strcmp(metodo, "GET") == 0) {
+    if (strcmp(metodo, "GET") == 0)
+    {
         char arquivo_alvo[512];
         snprintf(arquivo_alvo, sizeof(arquivo_alvo), "%s%s", STATIC_DIR, strcmp(caminho, "/") == 0 ? "index.html" : caminho + 1);
 
         serve_file(novo_socket, arquivo_alvo);
     }
-    else if (strcmp(metodo, "POST") == 0) {
-        if (corpo && strlen(corpo) > 0) {
-            printf("Dados recebidos do cliente: %s\n", corpo);
+    else if (strcmp(metodo, "POST") == 0)
+    {
+        if (corpo && strlen(corpo) > 0)
+        {
+            printf("[INFO]: Data received from client: %s\n", corpo);
         }
 
-        char *json = "{\"status\": \"sucesso\", \"mensagem\": \"POST recebido pelo servidor C!\"}";
+        char *json = "{\"status\": \"success\", \"message\": \"POST received by C server!\"}";
         send_http_response(novo_socket, "200 OK", "application/json", json);
-        printf("Resposta do POST enviada com sucesso.\n");
+        printf("[INFO]: POST response sent successfully.\n");
     }
-    else {
-        send_http_response(novo_socket, "405 Method Not Allowed", "text/plain", "Metodo nao suportado.");
+    else
+    {
+        send_http_response(novo_socket, "405 Method Not Allowed", "text/plain", "Method not supported.");
     }
 }
 
-void serve_file(int socket_cliente, const char *arquivo) {
+void serve_file(int socket_cliente, const char *arquivo)
+{
     FILE *f = fopen(arquivo, "rb");
-    if (f == NULL) {
-        perror("Erro ao abrir arquivo");
-        send_http_response(socket_cliente, "404 Not Found", "text/html", "<h1>404 - Arquivo nao encontrado</h1>");
+    if (f == NULL)
+    {
+        perror("[ERR]: Error opening file");
+        send_http_response(socket_cliente, "404 Not Found", "text/html", "<h1>404 - File not found</h1>");
         return;
     }
 
@@ -77,11 +90,12 @@ void serve_file(int socket_cliente, const char *arquivo) {
     long tamanho = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    char *conteudo = (char*) malloc(tamanho);
-    if (conteudo == NULL) {
-        perror("Erro de alocação de memória");
+    char *conteudo = (char *)malloc(tamanho);
+    if (conteudo == NULL)
+    {
+        perror("[ERR]: Memory allocation error");
         fclose(f);
-        send_http_response(socket_cliente, "500 Internal Server Error", "text/plain", "Erro interno de memoria.");
+        send_http_response(socket_cliente, "500 Internal Server Error", "text/plain", "Internal memory error.");
         return;
     }
 
@@ -93,7 +107,8 @@ void serve_file(int socket_cliente, const char *arquivo) {
              "Content-Type: text/html\r\n"
              "Content-Length: %ld\r\n"
              "Connection: close\r\n"
-             "\r\n", tamanho);
+             "\r\n",
+             tamanho);
 
     send(socket_cliente, cabecalho, strlen(cabecalho), 0);
     send(socket_cliente, conteudo, tamanho, 0);

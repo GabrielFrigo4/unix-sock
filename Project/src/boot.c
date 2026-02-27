@@ -6,41 +6,46 @@
 #include <unistd.h>
 #include "boot.h"
 
-int boot_server(int porta) {
-    int serv_file_desc;
-    struct sockaddr_in ender_serv;
-    int opt = 1;
+int boot_server(int port)
+{
+    int server_socket;
+    struct sockaddr_in socket_address;
+    int socket_opt = 1;
 
-    if ((serv_file_desc = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("Erro ao criar socket");
+    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        perror("[ERR]: Error creating socket");
         exit(EXIT_FAILURE);
     }
 
-    if (setsockopt(serv_file_desc, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-        perror("Erro no setsockopt");
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)))
+    {
+        perror("[ERR]: Error in setsockopt");
         exit(EXIT_FAILURE);
     }
 
-    printf("\nSocket criado: %d\n", serv_file_desc);
+    printf("\n[INFO]: Socket created: %d\n", server_socket);
 
-    memset(&ender_serv, 0, sizeof(ender_serv));
-    ender_serv.sin_family = AF_INET;
-    ender_serv.sin_addr.s_addr = INADDR_ANY;
-    ender_serv.sin_port = htons(porta);
+    memset(&socket_address, 0, sizeof(socket_address));
+    socket_address.sin_family = AF_INET;
+    socket_address.sin_addr.s_addr = INADDR_ANY;
+    socket_address.sin_port = htons(port);
 
-    if (bind(serv_file_desc, (struct sockaddr *)&ender_serv, sizeof(ender_serv)) < 0) {
-        perror("Erro no bind");
-        close(serv_file_desc);
+    if (bind(server_socket, (struct sockaddr *)&socket_address, sizeof(socket_address)) < 0)
+    {
+        perror("[ERR]: Error in bind");
+        close(server_socket);
         exit(EXIT_FAILURE);
     }
-    printf("Bind feito com sucesso!\n");
+    printf("[INFO]: Bind successful!\n");
 
-    if (listen(serv_file_desc, 10) < 0) {
-        perror("Erro no listen");
-        close(serv_file_desc);
+    if (listen(server_socket, 255) < 0)
+    {
+        perror("[ERR]: Error in listen");
+        close(server_socket);
         exit(EXIT_FAILURE);
     }
-    printf("Servidor iniciado. Aguardando conexão na porta %d...\n\n", porta);
+    printf("[INFO]: Server started. Waiting for connections on port %d...\n\n", port);
 
-    return serv_file_desc;
+    return server_socket;
 }

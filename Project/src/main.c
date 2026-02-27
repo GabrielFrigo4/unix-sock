@@ -8,26 +8,29 @@
 #include "boot.h"
 #include "server.h"
 
-int main() {
-    int serv_file_desc = boot_server(PORTA);
+int main()
+{
+    int server_socket = boot_server(PORT);
 
-    int novo_socket;
+    int client_socket;
     struct sockaddr_in cliente;
     socklen_t c = sizeof(cliente);
-    while ((novo_socket = accept(serv_file_desc, (struct sockaddr *)&cliente, &c))) {
-        if (novo_socket < 0) {
-            perror("Erro no accept");
+    while ((client_socket = accept(server_socket, (struct sockaddr *)&cliente, &c)))
+    {
+        if (client_socket < 0)
+        {
+            perror("[ERR]: Error in accept");
             continue;
         }
-        printf("Novo socket criado: %d\n", novo_socket);
+        printf("[INFO]: New socket created: %d\n", client_socket);
 
-        handle_request(novo_socket);
+        handle_request(client_socket);
 
-        close(novo_socket);
-        printf("Novo socket encerrado.\n\n");
+        close(client_socket);
+        printf("[INFO]: New socket closed.\n\n");
     }
 
-    close(serv_file_desc);
-    printf("Servidor encerrado com sucesso!\n");
+    close(server_socket);
+    printf("[INFO]: Server terminated successfully!\n");
     return EXIT_SUCCESS;
 }
