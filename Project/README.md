@@ -1,4 +1,3 @@
-```markdown
 # 💻 **Implementação: Servidor HTTP/1.1 Concorrente em C (POSIX)**
 
 ## 🎯 **Arquitetura e Objetivo Técnico (V1)**
