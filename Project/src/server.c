@@ -1,118 +1,86 @@
-#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <unistd.h>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
 #include "server.h"
 
-#define STATIC_DIR "./web/"
-
-static void send_http_response(int socket, const char *status, const char *content_type, const char *corpo)
+static void log_server_addresses(int port)
 {
-    char resposta[1024];
-    snprintf(resposta, sizeof(resposta),
-             "HTTP/1.1 %s\r\n"
-             "Content-Type: %s\r\n"
-             "Content-Length: %lu\r\n"
-             "Connection: close\r\n"
-             "\r\n"
-             "%s",
-             status, content_type, strlen(corpo), corpo);
+    struct ifaddrs *interfaces;
+    char ip_str[INET_ADDRSTRLEN];
 
-    send(socket, resposta, strlen(resposta), 0);
-}
+    printf("[INFO]: Server started.\n");
+    printf("[INFO]: You can access the server clicking on the links below:\n");
 
-void handle_request(int novo_socket)
-{
-    char metodo[10] = {0}, caminho[256] = {0}, versao[20] = {0};
-    char buffer[2048] = {0};
-
-    int bytes_recebidos = recv(novo_socket, buffer, sizeof(buffer) - 1, 0);
-    if (bytes_recebidos <= 0)
+    if (getifaddrs(&interfaces) != 0)
     {
-        if (bytes_recebidos < 0)
-            perror("[ERR]: Error reading from client");
-        else
-            printf("[WARN]: Client disconnected.\n");
+        printf("        -> http://127.0.0.1:%d/\n\n", port);
         return;
     }
 
-    buffer[bytes_recebidos] = '\0';
-    sscanf(buffer, "%9s %255s %19s", metodo, caminho, versao);
-    printf("[INFO]: Method: %s | Path: %s\n", metodo, caminho);
-
-    if (strstr(caminho, "..") != NULL)
+    for (struct ifaddrs *temp_addr = interfaces; temp_addr != NULL; temp_addr = temp_addr->ifa_next)
     {
-        send_http_response(novo_socket, "403 Forbidden", "text/plain", "Access Denied.");
-        return;
-    }
-
-    char *corpo = strstr(buffer, "\r\n\r\n");
-    if (corpo)
-        corpo += 4;
-
-    if (strcmp(metodo, "GET") == 0)
-    {
-        char arquivo_alvo[512];
-        snprintf(arquivo_alvo, sizeof(arquivo_alvo), "%s%s", STATIC_DIR, strcmp(caminho, "/") == 0 ? "index.html" : caminho + 1);
-
-        serve_file(novo_socket, arquivo_alvo);
-    }
-    else if (strcmp(metodo, "POST") == 0)
-    {
-        if (corpo && strlen(corpo) > 0)
+        if (temp_addr->ifa_addr != NULL && temp_addr->ifa_addr->sa_family == AF_INET)
         {
-            printf("[INFO]: Data received from client: %s\n", corpo);
+            struct sockaddr_in *sock_addr = (struct sockaddr_in *)temp_addr->ifa_addr;
+            inet_ntop(AF_INET, &sock_addr->sin_addr, ip_str, INET_ADDRSTRLEN);
+            
+            printf("        -> http://%s:%d/\n", ip_str, port);
         }
+    }
 
-        char *json = "{\"status\": \"success\", \"message\": \"POST received by C server!\"}";
-        send_http_response(novo_socket, "200 OK", "application/json", json);
-        printf("[INFO]: POST response sent successfully.\n");
-    }
-    else
-    {
-        send_http_response(novo_socket, "405 Method Not Allowed", "text/plain", "Method not supported.");
-    }
+    freeifaddrs(interfaces);
+    printf("\n");
 }
 
-void serve_file(int socket_cliente, const char *arquivo)
+int server_init(int port)
 {
-    FILE *f = fopen(arquivo, "rb");
-    if (f == NULL)
+    int server_socket;
+    struct sockaddr_in socket_address;
+    int socket_opt = 1;
+
+    server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket < 0)
     {
-        perror("[ERR]: Error opening file");
-        send_http_response(socket_cliente, "404 Not Found", "text/html", "<h1>404 - File not found</h1>");
-        return;
+        perror("[ERR]: Error creating socket");
+        exit(EXIT_FAILURE);
     }
 
-    fseek(f, 0, SEEK_END);
-    long tamanho = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    char *conteudo = (char *)malloc(tamanho);
-    if (conteudo == NULL)
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)))
     {
-        perror("[ERR]: Memory allocation error");
-        fclose(f);
-        send_http_response(socket_cliente, "500 Internal Server Error", "text/plain", "Internal memory error.");
-        return;
+        perror("[ERR]: Error in setsockopt");
+        exit(EXIT_FAILURE);
     }
 
-    fread(conteudo, 1, tamanho, f);
+    printf("\n[INFO]: Socket created: %d\n", server_socket);
 
-    char cabecalho[512];
-    snprintf(cabecalho, sizeof(cabecalho),
-             "HTTP/1.1 200 OK\r\n"
-             "Content-Type: text/html\r\n"
-             "Content-Length: %ld\r\n"
-             "Connection: close\r\n"
-             "\r\n",
-             tamanho);
+    memset(&socket_address, 0, sizeof(socket_address));
+    socket_address.sin_family = AF_INET;
+    socket_address.sin_addr.s_addr = INADDR_ANY;
+    socket_address.sin_port = htons(port);
 
-    send(socket_cliente, cabecalho, strlen(cabecalho), 0);
-    send(socket_cliente, conteudo, tamanho, 0);
+    if (bind(server_socket, (struct sockaddr *)&socket_address, sizeof(socket_address)) < 0)
+    {
+        perror("[ERR]: Error in bind");
+        close(server_socket);
+        exit(EXIT_FAILURE);
+    }
+    
+    printf("[INFO]: Bind successful!\n");
 
-    free(conteudo);
-    fclose(f);
+    if (listen(server_socket, 255) < 0)
+    {
+        perror("[ERR]: Error in listen");
+        close(server_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    log_server_addresses(port);
+
+    return server_socket;
 }
+
