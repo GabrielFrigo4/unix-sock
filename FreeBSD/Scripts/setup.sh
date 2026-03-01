@@ -56,14 +56,14 @@ sysrc allscreens_flags="-f spleen-16x32"
 # SUDO
 pkg install --yes sudo
 cat << 'EOF' | tee "/usr/local/etc/sudoers.d/wheel" > "/dev/null"
-%wheel ALL=(ALL:ALL) ALL
+%wheel ALL=(ALL:ALL) NOPASSWD: ALL
 EOF
 chmod 0440 "/usr/local/etc/sudoers.d/wheel"
 
 # DOAS
 pkg install --yes doas
 cat << 'EOF' | tee "/usr/local/etc/doas.conf" > "/dev/null"
-permit persist :wheel
+permit nopass :wheel
 EOF
 chmod 0440 "/usr/local/etc/doas.conf"
 
@@ -129,8 +129,9 @@ create_launcher() {
 
 # CREATE LAUNCHERS
 create_launcher 0   "Launch Settings"       "gnome-control-center"  "<Control><Alt>s"
-create_launcher 1   "Launch Terminal"       "kgx"                   "<Control><Alt>t"
-create_launcher 2   "Launch Emacs"          "emacs"                 "<Control><Alt>e"
+create_launcher 1   "Launch Console"        "kgx"                   "<Control><Alt>t"
+create_launcher 2   "Launch Terminal"       "ptyxis"                "<Control><Alt>y"
+create_launcher 3   "Launch Emacs"          "emacs"                 "<Control><Alt>e"
 
 ### ################################################################################################################################
 
@@ -188,32 +189,36 @@ sudo chsh -s "$(which sh)" "$(whoami)"
 sudo chsh -s "$(which sh)" "root"
 
 # Kgx Config
-KGX_BLOCK="$(mktemp)"
-cat << 'EOF' > "${KGX_BLOCK}"
+SHELL_BLOCK="$(mktemp)"
+cat << 'EOF' > "${SHELL_BLOCK}"
 ### ################################
-### KGX ENVIRONMENT
+### TERMINAL ENVIRONMENT
 ### ################################
 
-if [ -z "${KGX_INIT}" ]; then
+if [ -z "${SHELL_INIT}" ]; then
 	if [ -z "${KGX_SHELL}" ]; then
 		KGX_SHELL="$(which zsh)"
 	fi
 
 	if [ -x "${KGX_SHELL}" ]; then
 		export SHELL="${KGX_SHELL}"
-		unset KGX_INIT KGX_SHELL
-		clear
+		unset SHELL_INIT KGX_SHELL
+		printf "\033[H\033[2J\033[3J"
 		exec "${SHELL}"
 	else
-		unset KGX_INIT KGX_SHELL
+		unset SHELL_INIT KGX_SHELL
 	fi
 fi
+
+### ################################
+### BASIC ENVIRONMENT
+### ################################
 EOF
 touch "${HOME}/.shrc"
-cat "${KGX_BLOCK}" "${HOME}/.shrc" > "${HOME}/.shrc.tmp" && mv "${HOME}/.shrc.tmp" "${HOME}/.shrc"
+cat "${SHELL_BLOCK}" "${HOME}/.shrc" > "${HOME}/.shrc.tmp" && mv "${HOME}/.shrc.tmp" "${HOME}/.shrc"
 sudo touch "/root/.shrc"
-sudo cat "${KGX_BLOCK}" "/root/.shrc" | sudo tee "/root/.shrc.tmp" > /dev/null && sudo mv "/root/.shrc.tmp" "/root/.shrc"
-rm "${KGX_BLOCK}"
+sudo cat "${SHELL_BLOCK}" "/root/.shrc" | sudo tee "/root/.shrc.tmp" > /dev/null && sudo mv "/root/.shrc.tmp" "/root/.shrc"
+rm "${SHELL_BLOCK}"
 
 # Config Shell
 cat << 'EOF' | tee -a "${HOME}/.shrc" | sudo tee -a "/root/.shrc" > "/dev/null"
@@ -221,32 +226,59 @@ cat << 'EOF' | tee -a "${HOME}/.shrc" | sudo tee -a "/root/.shrc" > "/dev/null"
 ### SHELL ENVIRONMENT
 ### ################################
 
-export KGX_INIT=1
+export SHELL_INIT=1
 
-export C_RED='\[\e[1;31m\]'
-export C_GREEN='\[\e[1;32m\]'
-export C_YELLOW='\[\e[1;33m\]'
-export C_BLUE='\[\e[1;34m\]'
-export C_PURPLE='\[\e[1;35m\]'
-export C_CYAN='\[\e[1;36m\]'
-export C_GRAY='\[\e[1;30m\]'
-export C_RESET='\[\e[0m\]'
+### ################################
+### SHELL APPEARANCE
+### ################################
+
+C_RESET="\[\e[0m\]"
+
+C_NORM_BLACK="\[\e[0;30m\]"
+C_NORM_RED="\[\e[0;31m\]"
+C_NORM_GREEN="\[\e[0;32m\]"
+C_NORM_YELLOW="\[\e[0;33m\]"
+C_NORM_BLUE="\[\e[0;34m\]"
+C_NORM_MAGENTA="\[\e[0;35m\]"
+C_NORM_CYAN="\[\e[0;36m\]"
+C_NORM_WHITE="\[\e[0;37m\]"
+
+C_BRT_GRAY="\[\e[1;90m\]"
+C_BRT_RED="\[\e[1;91m\]"
+C_BRT_GREEN="\[\e[1;92m\]"
+C_BRT_YELLOW="\[\e[1;93m\]"
+C_BRT_BLUE="\[\e[1;94m\]"
+C_BRT_MAGENTA="\[\e[1;95m\]"
+C_BRT_CYAN="\[\e[1;96m\]"
+C_BRT_WHITE="\[\e[1;97m\]"
 
 update_prompt() {
 	local branch="$(command git symbolic-ref --short HEAD 2>/dev/null || command git rev-parse --short HEAD 2>/dev/null)"
 	local git_info=" "
 
 	if [ -n "${branch}" ]; then
-		git_info=" ${C_BLUE}(${C_RED}${branch}${C_BLUE})${C_RESET} "
+		git_info=" ${C_BRT_BLUE}(${C_BRT_RED}${branch}${C_BRT_BLUE})${C_RESET} "
 	fi
 
+	local usr_color
 	if [ "$(id -u)" -eq 0 ]; then
-		usr_color="${C_RED}"
+		usr_color="${C_BRT_RED}"
 	else
-		usr_color="${C_GREEN}"
+		usr_color="${C_BRT_GREEN}"
 	fi
 
-	export PS1="${usr_color}\u${C_BLUE}@${C_PURPLE}\h${C_GRAY}:${C_GRAY}[${C_YELLOW}\w${C_GRAY}]${C_RESET}${git_info}${C_CYAN}\$${C_RESET} "
+	local cur_user="${USER:-$(id -un)}"
+	local cur_host="$(hostname -s)"
+	local cur_dir="${PWD}"
+	
+	cur_dir="${cur_dir#$HOME}"
+	if [ "${PWD}" != "${cur_dir}" ]; then
+		cur_dir="~${cur_dir}"
+	else
+		cur_dir="${PWD}"
+	fi
+
+	export PS1="${usr_color}${cur_user}${C_BRT_BLUE}@${C_BRT_MAGENTA}${cur_host}${C_BRT_GRAY}:${C_BRT_GRAY}[${C_BRT_YELLOW}${cur_dir}${C_BRT_GRAY}]${C_RESET}${git_info}${C_BRT_CYAN}\$${C_RESET} "
 }
 update_prompt
 
@@ -259,16 +291,10 @@ run_and_update() {
 	return $ret
 }
 
-cd()    { run_and_update cd "$@"; }
-rm()    { run_and_update rm "$@"; }
-rmdir() { run_and_update rmdir "$@"; }
-git()   { run_and_update git "$@"; }
-gh()    { run_and_update gh "$@"; }
-wget()  { run_and_update wget "$@"; }
-curl()  { run_and_update curl "$@"; }
-unzip() { run_and_update unzip "$@"; }
-tar()   { run_and_update tar "$@"; }
-7z()    { run_and_update 7z "$@"; }
+TRIGGER_COMMANDS="cd rm rmdir git gh wget curl unzip tar 7z"
+for cmd in $TRIGGER_COMMANDS; do
+	eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
+done
 
 ### ################################
 ### SHELL FUNCTIONS
@@ -277,6 +303,12 @@ tar()   { run_and_update tar "$@"; }
 ### ################################
 ### SHELL ALIAS
 ### ################################
+
+# Commands ALIAS
+alias clear='printf "\033[H\033[2J\033[3J"'
+# Packages ALIAS
+alias uppkg='sudo pkg update && sudo pkg upgrade --yes'
+alias upall='uppkg'
 
 ### ################################
 ### SHELL CONFIGURATION
@@ -296,7 +328,31 @@ cat << 'EOF' | tee -a "${HOME}/.bashrc" | sudo tee -a "/root/.bashrc" > "/dev/nu
 ### SHELL ENVIRONMENT
 ### ################################
 
-export KGX_INIT=1
+export SHELL_INIT=1
+
+### ################################
+### SHELL APPEARANCE
+### ################################
+
+C_RESET="\[\e[0m\]"
+
+C_NORM_BLACK="\[\e[0;30m\]"
+C_NORM_RED="\[\e[0;31m\]"
+C_NORM_GREEN="\[\e[0;32m\]"
+C_NORM_YELLOW="\[\e[0;33m\]"
+C_NORM_BLUE="\[\e[0;34m\]"
+C_NORM_MAGENTA="\[\e[0;35m\]"
+C_NORM_CYAN="\[\e[0;36m\]"
+C_NORM_WHITE="\[\e[0;37m\]"
+
+C_BRT_GRAY="\[\e[1;90m\]"
+C_BRT_RED="\[\e[1;91m\]"
+C_BRT_GREEN="\[\e[1;92m\]"
+C_BRT_YELLOW="\[\e[1;93m\]"
+C_BRT_BLUE="\[\e[1;94m\]"
+C_BRT_MAGENTA="\[\e[1;95m\]"
+C_BRT_CYAN="\[\e[1;96m\]"
+C_BRT_WHITE="\[\e[1;97m\]"
 
 git_branch() {
 	local branch="$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)"
@@ -309,7 +365,7 @@ show_git_branch() {
 	if git rev-parse --is-inside-work-tree &>/dev/null; then
 		local branch="$(git_branch)"
 		if [ -n "${branch}" ]; then
-			echo "❮\[\e[1;31m\]󰊢 \[\e[1;35m\]${branch}\[\e[0;33m\]❯"
+			echo "❮${C_BRT_RED}󰊢 ${C_BRT_MAGENTA}${branch}${C_NORM_YELLOW}❯"
 		fi
 	fi
 }
@@ -317,14 +373,15 @@ show_git_branch() {
 os_version=$(freebsd-version)
 sh_name=$(ps -p $$ -o comm=)
 if [ "$(id -u)" -eq 0 ]; then
-	usr_color="\[\e[1;31m\]"
+	usr_color="${C_BRT_RED}"
 else
-	usr_color="\[\e[1;32m\]"
+	usr_color="${C_BRT_GREEN}"
 fi
+
 update_prompt() {
-	PS1="\n\[\e[0;33m\]\[\e[1;31m\] \[\e[1;35m\]${os_version}\[\e[0;33m\]─\[\e[1;34m\] \[\e[1;35m\]${sh_name}\[\e[0;33m\]"
-	PS1+="\n\[\e[0;33m\]┌──❮ \[\e[1;32m\] \t\[\e[0;33m\] ❯─❮ \[\e[1;32m\] \D{%d/%m/%y}\[\e[0;33m\] ❯─❮ \[\e[1;33m\] \[\e[1;36m\]\W\[\e[0;33m\] ❯─ ❮\[\e[1;34m\] ${usr_color}\u\[\e[0;33m\]❯ $(show_git_branch)"
-	PS1+="\n\[\e[0;33m\]└─\[\e[1;34m\]\[\e[0m\] "
+	PS1="\n${C_NORM_YELLOW}${C_BRT_RED} ${C_BRT_MAGENTA}${os_version}${C_NORM_YELLOW}─${C_BRT_BLUE} ${C_BRT_MAGENTA}${sh_name}${C_NORM_YELLOW}"
+	PS1+="\n${C_NORM_YELLOW}┌──❮ ${C_BRT_GREEN} \t${C_NORM_YELLOW} ❯─❮ ${C_BRT_GREEN} \D{%d/%m/%y}${C_NORM_YELLOW} ❯─❮ ${C_BRT_YELLOW} ${C_BRT_CYAN}\W${C_NORM_YELLOW} ❯─ ❮${C_BRT_BLUE} ${usr_color}\u${C_NORM_YELLOW}❯ $(show_git_branch)"
+	PS1+="\n${C_NORM_YELLOW}└─${C_BRT_BLUE}${C_RESET} "
 }
 PROMPT_COMMAND=update_prompt
 
@@ -335,6 +392,12 @@ PROMPT_COMMAND=update_prompt
 ### ################################
 ### SHELL ALIAS
 ### ################################
+
+# Commands ALIAS
+alias clear='printf "\e[H\e[2J\e[3J"'
+# Packages ALIAS
+alias uppkg='sudo pkg update && sudo pkg upgrade --yes'
+alias upall='uppkg'
 
 ### ################################
 ### SHELL CONFIGURATION
@@ -379,7 +442,31 @@ setopt AUTO_CD
 ### SHELL ENVIRONMENT
 ### ################################
 
-export KGX_INIT=1
+export SHELL_INIT=1
+
+### ################################
+### SHELL APPEARANCE
+### ################################
+
+local C_RESET="%f%b"
+
+local C_NORM_BLACK="%b%F{0}"
+local C_NORM_RED="%b%F{1}"
+local C_NORM_GREEN="%b%F{2}"
+local C_NORM_YELLOW="%b%F{3}"
+local C_NORM_BLUE="%b%F{4}"
+local C_NORM_MAGENTA="%b%F{5}"
+local C_NORM_CYAN="%b%F{6}"
+local C_NORM_WHITE="%b%F{7}"
+
+local C_BRT_GRAY="%B%F{8}"
+local C_BRT_RED="%B%F{9}"
+local C_BRT_GREEN="%B%F{10}"
+local C_BRT_YELLOW="%B%F{11}"
+local C_BRT_BLUE="%B%F{12}"
+local C_BRT_MAGENTA="%B%F{13}"
+local C_BRT_CYAN="%B%F{14}"
+local C_BRT_WHITE="%B%F{15}"
 
 git_branch() {
 	local branch="$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)"
@@ -392,7 +479,7 @@ show_git_branch() {
 	if git rev-parse --is-inside-work-tree &>/dev/null; then
 		local branch="$(git_branch)"
 		if [ -n "${branch}" ]; then
-			echo "❮%B%F{red}󰊢 %F{magenta}${branch}%b%F{yellow}❯"
+			echo "❮${C_BRT_RED}󰊢 ${C_BRT_MAGENTA}${branch}${C_NORM_YELLOW}❯"
 		fi
 	fi
 }
@@ -400,14 +487,15 @@ show_git_branch() {
 os_version=$(freebsd-version)
 sh_name=$(ps -p $$ -o comm=)
 if [ "$(id -u)" -eq 0 ]; then
-	usr_color="%B%F{red}"
+	usr_color="${C_BRT_RED}"
 else
-	usr_color="%B%F{green}"
+	usr_color="${C_BRT_GREEN}"
 fi
+
 export PROMPT=$'
-%b%F{yellow}%B%F{red} %F{magenta}${os_version}%b%F{yellow}─%B%F{blue} %F{magenta}${sh_name}%b%F{yellow}
-%b%F{yellow}┌──❮ %B%F{green} %*%b%F{yellow} ❯─❮ %B%F{green} %D{%d/%m/%y}%b%F{yellow} ❯─❮ %B%F{yellow} %B%F{cyan}%c%b%F{yellow} ❯─ ❮%B%F{blue} ${usr_color}%n%b%F{yellow}❯ \$(show_git_branch)
-%b%F{yellow}└─%B%F{blue}%f%b '
+${C_NORM_YELLOW}${C_BRT_RED} ${C_BRT_MAGENTA}${os_version}${C_NORM_YELLOW}─${C_BRT_BLUE} ${C_BRT_MAGENTA}${sh_name}${C_NORM_YELLOW}
+${C_NORM_YELLOW}┌──❮ ${C_BRT_GREEN} %*${C_NORM_YELLOW} ❯─❮ ${C_BRT_GREEN} %D{%d/%m/%y}${C_NORM_YELLOW} ❯─❮ ${C_BRT_YELLOW} ${C_BRT_CYAN}%c${C_NORM_YELLOW} ❯─ ❮${C_BRT_BLUE} ${usr_color}%n${C_NORM_YELLOW}❯ $(show_git_branch)
+${C_NORM_YELLOW}└─${C_BRT_BLUE}${C_RESET} '
 
 ### ################################
 ### SHELL FUNCTIONS
@@ -416,6 +504,12 @@ export PROMPT=$'
 ### ################################
 ### SHELL ALIAS
 ### ################################
+
+# Commands ALIAS
+alias clear='printf "\e[H\e[2J\e[3J"'
+# Packages ALIAS
+alias uppkg='sudo pkg update && sudo pkg upgrade --yes'
+alias upall='uppkg'
 
 ### ################################
 ### SHELL CONFIGURATION
@@ -705,5 +799,8 @@ sudo pkg install --yes python
 
 # Web Browser
 sudo pkg install --yes firefox
+
+# Terminal
+sudo pkg install --yes ptyxis
 
 ### ################################################################################################################################
