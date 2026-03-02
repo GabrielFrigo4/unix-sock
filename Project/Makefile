@@ -1,5 +1,5 @@
 CC      := clang
-CFLAGS  := -Wall -Wextra -std=c23 -I./inc
+CFLAGS  := -Wall -Wextra -Werror -std=c23 -I./inc -O2
 TARGET  := server
 
 SRCDIR  := src
