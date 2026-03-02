@@ -1,7 +1,7 @@
 # 🤖 **Estudos de Prompts (Sistemas Operacionais, Kernel & Redes)**
  Aqui ficam registradas as sessões de exploração teórica focadas no comportamento de sistemas operacionais, arquiteturas de baixo nível, chamadas de sistema (`syscalls`), estruturas reais da linguagem C e na física da infraestrutura de telecomunicações.
 
-## 🗂️ Índice de Arquivos
+## 🗂️ **Índice de Arquivos**
  | Arquivo | Tópico Abordado |
  | :--- | :--- |
  | **[`Redes.md`](./Redes.md)** | 🌐 **Arquitetura de Redes & Telecomunicações.** <br>Ensaio acadêmico e rigoroso dissecando o Modelo OSI (da física pura à semântica), topologia, física da transmissão (FDM vs. TDM) e a matemática do atraso nodal em redes de comutação por pacotes versus circuitos. |

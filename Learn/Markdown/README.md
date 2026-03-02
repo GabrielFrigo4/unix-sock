@@ -1,7 +1,7 @@
 # 📝 **Estudos em Markdown (Sistemas Operacionais, Kernel & Redes)**
  Esta seção é dedicada às anotações teóricas e resumos formatados referentes aos conceitos fundamentais para o desenvolvimento do servidor web.
 
-## 🗂️ Índice de Arquivos
+## 🗂️ **Índice de Arquivos**
  | Arquivo | Tópico Abordado |
  | :--- | :--- |
  | **[`Redes.md`](./Redes.md)** | 🌐 **Arquitetura e Física de Redes.** <br>Aborda o Modelo OSI de forma rigorosa, diferenciando arquitetura, serviço e protocolo. Examina as camadas físicas, meios de transmissão guiados e não guiados, multiplexação espectral e temporal (FDM e TDM), e a matemática do atraso nodal na comutação de pacotes. |
