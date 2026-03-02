@@ -7,11 +7,12 @@
 
 ### ⚙️ **Modelo de Concorrência: POSIX Fork-per-Request**
  Para garantir que múltiplas requisições de rede sejam atendidas simultaneamente sem bloqueio de I/O, o servidor adota a system call UNIX padrão `fork()`.
+
  * **Isolamento de Falhas e Segurança:** Cada conexão de cliente é delegada a um processo filho isolado em seu próprio espaço de endereçamento de memória.
  * **Portabilidade de Escalonamento:** O processo daemon principal dedica-se exclusivamente ao loop de `accept()`. O escalonamento dos processos filhos é delegado ao *Scheduler* genérico do sistema operacional hospedeiro (seja o ULE no FreeBSD ou o CFS no Linux).
  * **Gestão de Recursos:** Implementação rigorosa de handlers genéricos para `SIGCHLD` para prevenir o acúmulo de processos zumbis (Defunct) e garantir o recolhimento adequado da memória.
 
-### ⏱️ Ciclo de Vida da Conexão e Syscalls POSIX
+### ⏱️ **Ciclo de Vida da Conexão e Syscalls POSIX**
  O diagrama abaixo ilustra a segregação de responsabilidades entre o Daemon Principal, o Kernel e o Processo Filho recém-criado, demonstrando a gestão dos *File Descriptors* de rede.
 
  ```mermaid
@@ -48,7 +49,7 @@
      end
  ```
 
-## ⚡ Definição dos Métodos Suportados
+## ⚡ **Definição dos Métodos Suportados**
  | Método | Comportamento no Servidor | Finalidade Técnica |
  | --- | --- | --- |
  | **GET** | Leitura via I/O padrão (`fread`) | Recuperação de recursos estáticos do diretório raiz. |

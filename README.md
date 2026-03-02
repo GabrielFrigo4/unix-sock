@@ -16,7 +16,7 @@
 
  Diferente de implementações iterativas básicas, este servidor gerencia o ciclo de vida completo de recursos através de uma Máquina de Estados Finitos (FSM) própria, suportando os seguintes métodos de requisição:
 
-## ⚡ Definição dos Métodos Suportados
+## ⚡ **Definição dos Métodos Suportados**
  | Método | Comportamento no Servidor | Finalidade Técnica |
  | :--- | :--- | :--- |
  | **GET** | Leitura via I/O padrão (`fread`) | Recuperação de recursos estáticos do diretório raiz. |
@@ -55,7 +55,7 @@
  * **Isolamento de Memória:** Falhas de segmentação (*Segfaults*) durante o processamento de uma requisição HTTP não derrubam o daemon principal.
  * **Gestão de Zumbis:** Implementação rigorosa de handlers para o sinal `SIGCHLD`, garantindo o recolhimento (*reap*) correto de processos finalizados e evitando o esgotamento da tabela de processos do SO.
 
-### 🗺️ Arquitetura de Concorrência do Sistema
+### 🗺️ **Arquitetura de Concorrência do Sistema**
  ```mermaid
  graph TD
      subgraph Internet Layer
@@ -104,6 +104,45 @@
 ## 🧩 **Parsing de Protocolo via Máquina de Estados (FSM)**
  * **Reconstrução de Fluxo:** Implementação de uma Máquina de Estados Finitos para processar o fluxo de bytes bruto do socket, permitindo tratar requisições fragmentadas ou ataques de *Slowloris* de forma resiliente.
  * **Análise de Headers:** Parsing manual de cabeçalhos HTTP/1.1 (como `Content-Length`), garantindo controle total sobre o layout de memória sem overhead de bibliotecas de terceiros.
+
+### 🧠 **Mecânica de Memória: In-situ Parsing (Zero-Copy)**
+ Para garantir que o servidor opere em complexidade espacial $\mathcal{O}(1)$ durante o parsing das requisições, abandonamos o uso de `malloc` ou duplicação de strings (comum em linguagens de alto nível).
+
+ Utilizamos uma técnica destrutiva no buffer original da pilha (Stack). Os delimitadores da RFC 7230 (`\r\n`, espaços e `:`) são substituídos por terminadores nulos (`\0`). A estrutura de domínio `http_request_t` mapeia seus ponteiros diretamente para os endereços de memória mutados dentro desse buffer.
+
+ ```mermaid
+ graph TD
+     subgraph 1. Ingestão TCP (Raw Buffer)
+         B["buffer[4096]: 'GET /index.html HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n'"]
+     end
+
+     subgraph 2. Tokenização Destrutiva (In-situ Mutation)
+         M["Mutated Buffer: 'GET\\0/index.html\\0HTTP/1.1\\0Host\\0 localhost\\0\\0'"]
+     end
+
+     subgraph 3. Mapeamento da Struct (Zero-Copy)
+         R_METHOD["req.method = HTTP_GET (Enum)"]
+         R_PATH["req.path = &buffer[4] ('/index.html')"]
+         R_VER["req.version = &buffer[16] ('HTTP/1.1')"]
+         R_HEAD_K["req.headers[0].key = &buffer[25] ('Host')"]
+         R_HEAD_V["req.headers[0].value = &buffer[30] ('localhost')"]
+     end
+
+     B -->|recv() acumula até \r\n\r\n| M
+     M -.->|strtok_r / strchr| R_METHOD
+     M -.->|Ponteiro de Memória| R_PATH
+     M -.->|Ponteiro de Memória| R_VER
+     M -.->|Ponteiro de Memória| R_HEAD_K
+     M -.->|Ponteiro de Memória| R_HEAD_V
+
+     style B fill:#2b2b2b,stroke:#ff5555,stroke-width:2px,color:#fff
+     style M fill:#2b2b2b,stroke:#55ff55,stroke-width:2px,color:#fff
+     style R_METHOD fill:#1e1e1e,stroke:#55aaff,color:#fff
+     style R_PATH fill:#1e1e1e,stroke:#55aaff,color:#fff
+     style R_VER fill:#1e1e1e,stroke:#55aaff,color:#fff
+     style R_HEAD_K fill:#1e1e1e,stroke:#ffaa00,color:#fff
+     style R_HEAD_V fill:#1e1e1e,stroke:#ffaa00,color:#fff
+ ```
 
 ---
 
