@@ -15,7 +15,7 @@ virt-install \
   --memory=8192 \
   --disk size=32,format=qcow2 \
   --network network=default \
-  --video virtio \
+  --video qxl \
   --channel spicevmc \
   --boot uefi \
   --cdrom="/var/lib/libvirt/images/FreeBSD.iso"

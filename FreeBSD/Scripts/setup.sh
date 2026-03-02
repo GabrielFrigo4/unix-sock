@@ -41,14 +41,15 @@ pkg install --yes xf86-video-vmware
 pkg install --yes xf86-input-vmmouse
 sysrc vmware_guest_kmod_enable="YES"
 sysrc vmware_guestd_enable="YES"
-sysrc kld_list+="vmmw_guest_kmod"
 
 # KVM/QEMU
+pkg install --yes xf86-video-qxl
 pkg install --yes qemu-guest-agent
-pkg install --yes drm-kmod
 sysrc qemu_guest_agent_enable="YES"
 sysrc spice_vdagentd_enable="YES"
-sysrc kld_list+="virtio_gpu"
+
+# UEFI
+pkg install --yes xf86-video-scfb
 
 # TERMINAL
 sysrc allscreens_flags="-f spleen-16x32"
