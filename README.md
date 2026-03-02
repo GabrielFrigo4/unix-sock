@@ -112,15 +112,15 @@
 
  ```mermaid
  graph TD
-     subgraph 1. Ingestão TCP (Raw Buffer)
-         B["buffer[4096]: 'GET /index.html HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n'"]
+     subgraph s1 ["1. Ingestão TCP (Raw Buffer)"]
+         B["buffer[4096]: 'GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n'"]
      end
 
-     subgraph 2. Tokenização Destrutiva (In-situ Mutation)
-         M["Mutated Buffer: 'GET\\0/index.html\\0HTTP/1.1\\0Host\\0 localhost\\0\\0'"]
+     subgraph s2 ["2. Tokenização Destrutiva (In-situ Mutation)"]
+         M["Mutated Buffer: 'GET\0/index.html\0HTTP/1.1\0Host\0 localhost\0\0'"]
      end
 
-     subgraph 3. Mapeamento da Struct (Zero-Copy)
+     subgraph s3 ["3. Mapeamento da Struct (Zero-Copy)"]
          R_METHOD["req.method = HTTP_GET (Enum)"]
          R_PATH["req.path = &buffer[4] ('/index.html')"]
          R_VER["req.version = &buffer[16] ('HTTP/1.1')"]
