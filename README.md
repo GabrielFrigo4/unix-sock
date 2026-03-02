@@ -112,28 +112,28 @@
 
  ```mermaid
  graph TD
-     subgraph s1 ["1. Ingestão TCP (Raw Buffer)"]
-         B["buffer[4096]: 'GET /index.html HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n'"]
+     subgraph s1 ["1. Ingestao TCP (Raw Buffer)"]
+         B["buffer[4096]: GET /index.html HTTP/1.1 [CRLF] Host: localhost [CRLF][CRLF]"]
      end
 
-     subgraph s2 ["2. Tokenização Destrutiva (In-situ Mutation)"]
-         M["Mutated Buffer: 'GET\\0/index.html\\0HTTP/1.1\\0Host\\0 localhost\\0\\0'"]
+     subgraph s2 ["2. Tokenizacao Destrutiva (In-situ Mutation)"]
+         M["Mutated Buffer: GET [NUL] /index.html [NUL] HTTP/1.1 [NUL] Host [NUL] localhost [NUL][NUL]"]
      end
 
      subgraph s3 ["3. Mapeamento da Struct (Zero-Copy)"]
          R_METHOD["req.method = HTTP_GET (Enum)"]
-         R_PATH["req.path = &buffer[4] ('/index.html')"]
-         R_VER["req.version = &buffer[16] ('HTTP/1.1')"]
-         R_HEAD_K["req.headers[0].key = &buffer[25] ('Host')"]
-         R_HEAD_V["req.headers[0].value = &buffer[30] ('localhost')"]
+         R_PATH["req.path = &buffer[4]"]
+         R_VER["req.version = &buffer[16]"]
+         R_HEAD_K["req.headers[0].key = &buffer[25]"]
+         R_HEAD_V["req.headers[0].value = &buffer[30]"]
      end
 
-     B -->|recv() acumula até CRLF CRLF| M
-     M -.->|strtok_r / strchr| R_METHOD
-     M -.->|Ponteiro de Memória| R_PATH
-     M -.->|Ponteiro de Memória| R_VER
-     M -.->|Ponteiro de Memória| R_HEAD_K
-     M -.->|Ponteiro de Memória| R_HEAD_V
+     B -->|Acumula no buffer ate CRLF CRLF| M
+     M -.->|strtok_r e strchr| R_METHOD
+     M -.->|Ponteiro de Memoria| R_PATH
+     M -.->|Ponteiro de Memoria| R_VER
+     M -.->|Ponteiro de Memoria| R_HEAD_K
+     M -.->|Ponteiro de Memoria| R_HEAD_V
 
      style B fill:#2b2b2b,stroke:#ff5555,stroke-width:2px,color:#fff
      style M fill:#2b2b2b,stroke:#55ff55,stroke-width:2px,color:#fff
