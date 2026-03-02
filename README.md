@@ -128,7 +128,7 @@
          R_HEAD_V["req.headers[0].value = &buffer[30] ('localhost')"]
      end
 
-     B -->|recv() acumula até \\r\\n\\r\\n| M
+     B -->|recv() acumula até CRLF CRLF| M
      M -.->|strtok_r / strchr| R_METHOD
      M -.->|Ponteiro de Memória| R_PATH
      M -.->|Ponteiro de Memória| R_VER
