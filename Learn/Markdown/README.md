@@ -1,11 +1,12 @@
-# 📝 **Estudos em Markdown (Sistemas Operacionais, Kernel & Redes)**
- Esta seção é dedicada às anotações teóricas e resumos formatados referentes aos conceitos fundamentais para o desenvolvimento do servidor web.
+# 📜 **Ensaios Teóricos**
+ > *"A física dos elétrons traduzida em arquitetura de software."*
 
-## 🗂️ **Índice de Arquivos**
- | Arquivo | Tópico Abordado |
- | :--- | :--- |
- | **[`Redes.md`](./Redes.md)** | 🌐 **Arquitetura e Física de Redes.** <br>Aborda o Modelo OSI de forma rigorosa, diferenciando arquitetura, serviço e protocolo. Examina as camadas físicas, meios de transmissão guiados e não guiados, multiplexação espectral e temporal (FDM e TDM), e a matemática do atraso nodal na comutação de pacotes. |
- | **[`Internet.md`](./Internet.md)** | 🌍 **Física e Lógica do Endereçamento de Redes.** <br>Análise profunda da fronteira cruzada entre a Camada 2 (Hardware/ASICs) e a Camada 3 (Software/Kernel). Detalha a exaustão das memórias TCAM, a rigidez do frame Ethernet perante o padrão EUI-64 e o impacto do IPv4 na destruição do roteamento *stateless* (NAT). Explora a elegância matemática do IPv6 ao eliminar o Broadcast local por Multicast (NDP) e gerar IPs nativamente com entropia (SLAAC). |
- | **[`História.md`](./História.md)** | 📜 **A Crônica dos Sistemas Operacionais.** <br>Narra a evolução geodigital desde os Mainframes e o projeto Multics até a era dos Castelos Flutuantes (Docker) e do Kubernetes. Detalha as guerras do Unix, a ascensão implacável do GNU/Linux, o pragmatismo da Babilônia de Ferro (Windows) e o ecossistema fechado do MacOS. |
- | **[`Unix.md`](./Unix.md)** | 🐧 **Kernel & Arquitetura de Baixo Nível.** <br>Disseca a filosofia de engenharia e design de sistemas como Linux, FreeBSD, Solaris/Illumos e Plan 9. Explora a implementação da camada VFS e a manipulação de memória utilizando termos estruturais reais em C, como `struct vnode`, `struct file`, `pointers` e chamadas de sistema (`syscalls`). Destaca também o pragmatismo do FreeBSD ao incorporar de forma nativa e elegante tecnologias do Solaris, como o OpenZFS e o DTrace. |
- | **[`Zero-Copy.md`](./Zero-Copy.md)** | ⚡ **Arquitetura de Hardware & Data Path.** <br>Análise técnica dissecando a jornada dos dados em um servidor bare-metal, do hardware à rede. Explora o paradoxo do uso de DMA versus CPU, os impactos da arquitetura NUMA, o custo imposto por sistemas de arquivos (UFS vs ZFS) e detalha a progressão do Zero-Copy até o bypass total do Kernel utilizando SPDK e DPDK para hiper-escala. |
+ Aqui repousam os **tomos definitivos** gerados pelas nossas matrizes. Textos autossuficientes, densos e implacáveis, projetados para não deixar pontas soltas sobre os fundamentos de hardware e kernel.
+
+ | Ensaio Documental | Tema | Resumo da Obra |
+ | :--- | :--- | :--- |
+ | **[`História.md`](./História.md)** | 🏰 Geopolítica Digital | A saga evolutiva e as guerras filosóficas que forjaram a "Torre de Babel" do Multics, as Cidades-Estado do BSD e a Horda Implacável do GNU/Linux. |
+ | **[`Internet.md`](./Internet.md)** | 🌐 Arquitetura L2/L3 | Uma aula magna sobre a simbiose de rede: o esgotamento do Ethernet, a "gambiarra" estrutural do NAT no IPv4 e o paradigma *stateless* do SLAAC no IPv6. |
+ | **[`Redes.md`](./Redes.md)** | 📶 Modelo OSI & Física | O detalhamento cirúrgico do framework "Top-Down" da ISO, a matemática do atraso dos pacotes e a geografia da latência desde a antena até a aplicação. |
+ | **[`Unix.md`](./Unix.md)** | 🧠 Dissecação do Kernel | A Catedral vs O Bazar em baixo nível. Compara as entranhas do VFS, a ilusão do "tudo é um arquivo" e o pragmatismo elegante do FreeBSD frente ao caos do Linux. |
+ | **[`Zero-Copy.md`](./Zero-Copy.md)** | 🚀 Hyper-Scale Data Path | O manual sobre a escalabilidade máxima. Explica o gargalo do *Context Switch* e a elevação aos Níveis 3 de *Zero-Copy* contornando a burocracia do Sistema Operacional. |
