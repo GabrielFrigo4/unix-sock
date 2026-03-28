@@ -112,7 +112,7 @@ create_launcher() {
 	gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH" "binding" "$BINDING"
 
 	local CURRENT_LIST
-	CURRENT_LIST=$(gsettings get "org.gnome.settings-daemon.plugins.media-keys" custom-keybindings)
+	CURRENT_LIST="$(gsettings get "org.gnome.settings-daemon.plugins.media-keys" custom-keybindings)"
 
 	if [[ "$CURRENT_LIST" != *"$KEY_PATH"* ]]; then
 		local NEW_LIST
@@ -218,7 +218,7 @@ EOF
 touch "${HOME}/.shrc"
 cat "${SHELL_BLOCK}" "${HOME}/.shrc" > "${HOME}/.shrc.tmp" && mv "${HOME}/.shrc.tmp" "${HOME}/.shrc"
 sudo touch "/root/.shrc"
-sudo cat "${SHELL_BLOCK}" "/root/.shrc" | sudo tee "/root/.shrc.tmp" > /dev/null && sudo mv "/root/.shrc.tmp" "/root/.shrc"
+sudo cat "${SHELL_BLOCK}" "/root/.shrc" | sudo tee "/root/.shrc.tmp" > "/dev/null" && sudo mv "/root/.shrc.tmp" "/root/.shrc"
 rm "${SHELL_BLOCK}"
 
 # Config Shell
@@ -233,55 +233,44 @@ export SHELL_INIT=1
 ### SHELL APPEARANCE
 ### ################################
 
-C_RESET="\[\e[0m\]"
-
-C_NORM_BLACK="\[\e[0;30m\]"
-C_NORM_RED="\[\e[0;31m\]"
-C_NORM_GREEN="\[\e[0;32m\]"
-C_NORM_YELLOW="\[\e[0;33m\]"
-C_NORM_BLUE="\[\e[0;34m\]"
-C_NORM_MAGENTA="\[\e[0;35m\]"
-C_NORM_CYAN="\[\e[0;36m\]"
-C_NORM_WHITE="\[\e[0;37m\]"
-
-C_BRT_GRAY="\[\e[1;90m\]"
-C_BRT_RED="\[\e[1;91m\]"
-C_BRT_GREEN="\[\e[1;92m\]"
-C_BRT_YELLOW="\[\e[1;93m\]"
-C_BRT_BLUE="\[\e[1;94m\]"
-C_BRT_MAGENTA="\[\e[1;95m\]"
-C_BRT_CYAN="\[\e[1;96m\]"
-C_BRT_WHITE="\[\e[1;97m\]"
+git_branch() {
+	_git_branch=" "
+	if command git rev-parse --is-inside-work-tree > "/dev/null" 2>&1; then
+		local branch="$(command git branch --show-current 2> "/dev/null" || command git rev-parse --short HEAD 2> "/dev/null")"
+		if [ -n "$branch" ]; then
+			local is_dirty="$(command git status --short -uno 2> "/dev/null" | tail -n1)"
+			local indicator=""
+			[ -n "$is_dirty" ] && indicator="${Y}*"
+			_git_branch=" ${B}(${R}${branch}${indicator}${B})${z} "
+		fi
+	fi
+}
 
 update_prompt() {
-	local branch="$(command git symbolic-ref --short HEAD 2>/dev/null || command git rev-parse --short HEAD 2>/dev/null)"
-	local git_info=" "
+	local z="\[\e[0m\]"
+	local R="\[\e[1;91m\]"
+	local G="\[\e[1;92m\]"
+	local Y="\[\e[1;93m\]"
+	local B="\[\e[1;94m\]"
+	local M="\[\e[1;95m\]"
+	local C="\[\e[1;96m\]"
+	local K="\[\e[1;90m\]"
 
-	if [ -n "${branch}" ]; then
-		git_info=" ${C_BRT_BLUE}(${C_BRT_RED}${branch}${C_BRT_BLUE})${C_RESET} "
-	fi
+	local _git_branch
+	git_branch
 
-	local usr_color
-	if [ "$(id -u)" -eq 0 ]; then
-		usr_color="${C_BRT_RED}"
-	else
-		usr_color="${C_BRT_GREEN}"
-	fi
+	local u
+	if [ "$(command id -u)" -eq 0 ]; then u="${R}"; else u="${G}"; fi
 
-	local cur_user="${USER:-$(id -un)}"
-	local cur_host="$(hostname -s)"
+	local cur_user="${USER:-$(command id -un)}"
+	local cur_host="$(command hostname -s)"
+	local cur_dir="${PWD##*/}"
+	[ "${PWD}" = "${HOME}" ] && cur_dir="~"
+	[ "${PWD}" = "/" ] && cur_dir="/"
 
-	local cur_dir
-	if [ "${PWD}" = "${HOME}" ]; then
-		cur_dir="~"
-	elif [ "${PWD}" = "/" ]; then
-		cur_dir="/"
-	else
-		cur_dir="$(basename "${PWD}")"
-	fi
-
-	export PS1="${usr_color}${cur_user}${C_BRT_BLUE}@${C_BRT_MAGENTA}${cur_host}${C_BRT_GRAY}:${C_BRT_GRAY}[${C_BRT_YELLOW}${cur_dir}${C_BRT_GRAY}]${C_RESET}${git_info}${C_BRT_CYAN}\$${C_RESET} "
+	export PS1="${u}${cur_user}${B}@${M}${cur_host}${K}:${K}[${Y}${cur_dir}${K}]${z}${_git_branch}${C}\$${z} "
 }
+
 update_prompt
 
 run_and_update() {
@@ -293,10 +282,21 @@ run_and_update() {
 	return $ret
 }
 
-TRIGGER_COMMANDS="cd rm rmdir git gh wget curl unzip tar 7z"
-for cmd in $TRIGGER_COMMANDS; do
+TRIGGERS="cd git gh"
+TRIGGERS="$TRIGGERS pkg make cmake ninja cc clang gcc"
+TRIGGERS="$TRIGGERS vi vim nvim emacs nano micro edit ee"
+TRIGGERS="$TRIGGERS touch cp mv rm rmdir mkdir chmod chown ln"
+TRIGGERS="$TRIGGERS wget curl tar 7z unzip ssh"
+
+for cmd in $TRIGGERS; do
+	unalias "$cmd" 2> "/dev/null"
 	eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
 done
+
+alias c++="run_and_update c++"
+alias clang++="run_and_update clang++"
+alias g++="run_and_update g++"
+alias :="update_prompt"
 
 ### ################################
 ### SHELL FUNCTIONS
@@ -336,55 +336,55 @@ export SHELL_INIT=1
 ### SHELL APPEARANCE
 ### ################################
 
-C_RESET="\[\e[0m\]"
-
-C_NORM_BLACK="\[\e[0;30m\]"
-C_NORM_RED="\[\e[0;31m\]"
-C_NORM_GREEN="\[\e[0;32m\]"
-C_NORM_YELLOW="\[\e[0;33m\]"
-C_NORM_BLUE="\[\e[0;34m\]"
-C_NORM_MAGENTA="\[\e[0;35m\]"
-C_NORM_CYAN="\[\e[0;36m\]"
-C_NORM_WHITE="\[\e[0;37m\]"
-
-C_BRT_GRAY="\[\e[1;90m\]"
-C_BRT_RED="\[\e[1;91m\]"
-C_BRT_GREEN="\[\e[1;92m\]"
-C_BRT_YELLOW="\[\e[1;93m\]"
-C_BRT_BLUE="\[\e[1;94m\]"
-C_BRT_MAGENTA="\[\e[1;95m\]"
-C_BRT_CYAN="\[\e[1;96m\]"
-C_BRT_WHITE="\[\e[1;97m\]"
-
 git_branch() {
-	local branch="$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)"
-	if [ -n "${branch}" ]; then
-		echo "${branch}"
-	fi
-}
-
-show_git_branch() {
-	if git rev-parse --is-inside-work-tree &>/dev/null; then
-		local branch="$(git_branch)"
-		if [ -n "${branch}" ]; then
-			echo "❮${C_BRT_RED}󰊢 ${C_BRT_MAGENTA}${branch}${C_NORM_YELLOW}❯"
+	if git rev-parse --is-inside-work-tree &> "/dev/null"; then
+		local branch="$(git branch --show-current 2> "/dev/null" || git rev-parse --short HEAD 2> "/dev/null")"
+		if [ -n "$branch" ]; then
+			local is_dirty="$(git status --short -uno 2> "/dev/null" | tail -n1)"
+			local indicator=""
+			[ -n "$is_dirty" ] && indicator="${C_BRT_YELLOW}*"
+			echo "❮${C_BRT_RED}󰊢 ${C_BRT_MAGENTA}${branch}${indicator}${C_NORM_YELLOW}❯"
 		fi
 	fi
 }
 
-os_version=$(freebsd-version)
-sh_name=$(ps -p $$ -o comm=)
-if [ "$(id -u)" -eq 0 ]; then
-	usr_color="${C_BRT_RED}"
-else
-	usr_color="${C_BRT_GREEN}"
-fi
-
 update_prompt() {
+	local C_RESET="\[\e[0m\]"
+
+	local C_NORM_BLACK="\[\e[0;30m\]"
+	local C_NORM_RED="\[\e[0;31m\]"
+	local C_NORM_GREEN="\[\e[0;32m\]"
+	local C_NORM_YELLOW="\[\e[0;33m\]"
+	local C_NORM_BLUE="\[\e[0;34m\]"
+	local C_NORM_MAGENTA="\[\e[0;35m\]"
+	local C_NORM_CYAN="\[\e[0;36m\]"
+	local C_NORM_WHITE="\[\e[0;37m\]"
+
+	local C_BRT_GRAY="\[\e[1;90m\]"
+	local C_BRT_RED="\[\e[1;91m\]"
+	local C_BRT_GREEN="\[\e[1;92m\]"
+	local C_BRT_YELLOW="\[\e[1;93m\]"
+	local C_BRT_BLUE="\[\e[1;94m\]"
+	local C_BRT_MAGENTA="\[\e[1;95m\]"
+	local C_BRT_CYAN="\[\e[1;96m\]"
+	local C_BRT_WHITE="\[\e[1;97m\]"
+
+	local os_version="$(freebsd-version)"
+	local sh_name="${0##*/}"
+	sh_name="${sh_name#-}"
+
+	local usr_color
+	if [ "$(id -u)" -eq 0 ]; then
+		usr_color="${C_BRT_RED}"
+	else
+		usr_color="${C_BRT_GREEN}"
+	fi
+
 	PS1="\n${C_NORM_YELLOW}${C_BRT_RED} ${C_BRT_MAGENTA}${os_version}${C_NORM_YELLOW}─${C_BRT_BLUE} ${C_BRT_MAGENTA}${sh_name}${C_NORM_YELLOW}"
-	PS1+="\n${C_NORM_YELLOW}┌──❮ ${C_BRT_GREEN} \t${C_NORM_YELLOW} ❯─❮ ${C_BRT_GREEN} \D{%d/%m/%y}${C_NORM_YELLOW} ❯─❮ ${C_BRT_YELLOW} ${C_BRT_CYAN}\W${C_NORM_YELLOW} ❯─ ❮${C_BRT_BLUE} ${usr_color}\u${C_NORM_YELLOW}❯ $(show_git_branch)"
+	PS1+="\n${C_NORM_YELLOW}┌──❮ ${C_BRT_GREEN} \t${C_NORM_YELLOW} ❯─❮ ${C_BRT_GREEN} \D{%d/%m/%y}${C_NORM_YELLOW} ❯─❮ ${C_BRT_YELLOW} ${C_BRT_CYAN}\W${C_NORM_YELLOW} ❯─ ❮${C_BRT_BLUE} ${usr_color}\u${C_NORM_YELLOW}❯ $(git_branch)"
 	PS1+="\n${C_NORM_YELLOW}└─${C_BRT_BLUE}${C_RESET} "
 }
+
 PROMPT_COMMAND=update_prompt
 
 ### ################################
@@ -421,24 +421,35 @@ cat << 'EOF' | tee -a "${HOME}/.zshrc" | sudo tee -a "/root/.zshrc" > "/dev/null
 ### SHELL OPTIONS SETUP
 ### ################################
 
+# Expansion OPTIONS
+setopt PROMPT_SUBST
+
+# Globbing OPTIONS
+setopt EXTENDED_GLOB
+setopt GLOB_DOTS
+
 # History OPTIONS
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 setopt HIST_REDUCE_BLANKS
-
-# Globbing & Expansion OPTIONS
-setopt EXTENDED_GLOB
-setopt GLOB_DOTS
-setopt PROMPT_SUBST
+setopt HIST_EXPIRE_DUPS_FIRST
+setopt HIST_FIND_NO_DUPS
+setopt HIST_VERIFY
 
 # Interaction OPTIONS
 setopt CORRECT
 setopt INTERACTIVE_COMMENTS
+setopt RM_STAR_WAIT
+setopt NO_CLOBBER
 unsetopt BEEP
 
 # Navigation OPTIONS
 setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt COMPLETE_IN_WORD
 
 ### ################################
 ### SHELL ENVIRONMENT
@@ -450,54 +461,71 @@ export SHELL_INIT=1
 ### SHELL APPEARANCE
 ### ################################
 
-local C_RESET="%f%b"
+() {
+	zstyle ':prompt:colors' reset     '%f%b'
 
-local C_NORM_BLACK="%b%F{0}"
-local C_NORM_RED="%b%F{1}"
-local C_NORM_GREEN="%b%F{2}"
-local C_NORM_YELLOW="%b%F{3}"
-local C_NORM_BLUE="%b%F{4}"
-local C_NORM_MAGENTA="%b%F{5}"
-local C_NORM_CYAN="%b%F{6}"
-local C_NORM_WHITE="%b%F{7}"
+	zstyle ':prompt:colors' n_black   '%b%F{0}'
+	zstyle ':prompt:colors' n_red     '%b%F{1}'
+	zstyle ':prompt:colors' n_green   '%b%F{2}'
+	zstyle ':prompt:colors' n_yellow  '%b%F{3}'
+	zstyle ':prompt:colors' n_blue    '%b%F{4}'
+	zstyle ':prompt:colors' n_magenta '%b%F{5}'
+	zstyle ':prompt:colors' n_cyan    '%b%F{6}'
+	zstyle ':prompt:colors' n_white   '%b%F{7}'
 
-local C_BRT_GRAY="%B%F{8}"
-local C_BRT_RED="%B%F{9}"
-local C_BRT_GREEN="%B%F{10}"
-local C_BRT_YELLOW="%B%F{11}"
-local C_BRT_BLUE="%B%F{12}"
-local C_BRT_MAGENTA="%B%F{13}"
-local C_BRT_CYAN="%B%F{14}"
-local C_BRT_WHITE="%B%F{15}"
+	zstyle ':prompt:colors' b_gray    '%B%F{8}'
+	zstyle ':prompt:colors' b_red     '%B%F{9}'
+	zstyle ':prompt:colors' b_green   '%B%F{10}'
+	zstyle ':prompt:colors' b_yellow  '%B%F{11}'
+	zstyle ':prompt:colors' b_blue    '%B%F{12}'
+	zstyle ':prompt:colors' b_magenta '%B%F{13}'
+	zstyle ':prompt:colors' b_cyan    '%B%F{14}'
+	zstyle ':prompt:colors' b_white   '%B%F{15}'
 
-git_branch() {
-	local branch="$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)"
-	if [ -n "${branch}" ]; then
-		echo "${branch}"
-	fi
-}
-
-show_git_branch() {
-	if git rev-parse --is-inside-work-tree &>/dev/null; then
-		local branch="$(git_branch)"
-		if [ -n "${branch}" ]; then
-			echo "❮${C_BRT_RED}󰊢 ${C_BRT_MAGENTA}${branch}${C_NORM_YELLOW}❯"
+	git_branch() {
+		if git rev-parse --is-inside-work-tree &> "/dev/null"; then
+			local branch="$(git branch --show-current 2> "/dev/null" || git rev-parse --short HEAD 2> "/dev/null")"
+			if [[ -n "$branch" ]]; then
+				local y Y R M
+				zstyle -s ':prompt:colors' n_yellow y
+				zstyle -s ':prompt:colors' b_yellow Y
+				zstyle -s ':prompt:colors' b_red R
+				zstyle -s ':prompt:colors' b_magenta M
+				local indicator=""
+				[[ -n "$(git status --short -uno 2> "/dev/null" | tail -n1)" ]] && indicator="${Y}*"
+				echo "❮${R}󰊢 ${M}${branch}${indicator}${y}❯"
+			fi
 		fi
+	}
+
+	local z
+	zstyle -s ':prompt:colors' reset z
+
+	local k K r R g G y Y b B m M c C w W
+	zstyle -s ':prompt:colors' n_black   k; zstyle -s ':prompt:colors' b_gray    K
+	zstyle -s ':prompt:colors' n_red     r; zstyle -s ':prompt:colors' b_red     R
+	zstyle -s ':prompt:colors' n_green   g; zstyle -s ':prompt:colors' b_green   G
+	zstyle -s ':prompt:colors' n_yellow  y; zstyle -s ':prompt:colors' b_yellow  Y
+	zstyle -s ':prompt:colors' n_blue    b; zstyle -s ':prompt:colors' b_blue    B
+	zstyle -s ':prompt:colors' n_magenta m; zstyle -s ':prompt:colors' b_magenta M
+	zstyle -s ':prompt:colors' n_cyan    c; zstyle -s ':prompt:colors' b_cyan    C
+	zstyle -s ':prompt:colors' n_white   w; zstyle -s ':prompt:colors' b_white   W
+
+	local u
+	if [ "$(id -u)" -eq 0 ]; then
+		zstyle -s ':prompt:colors' b_red u
+	else
+		zstyle -s ':prompt:colors' b_green u
 	fi
+
+	local os_version="$(freebsd-version)"
+	local sh_name="$ZSH_NAME"
+
+	export PROMPT="
+${y}${R} ${M}${os_version}${y}─${B} ${M}${sh_name}${y}
+${y}┌──❮ ${G} %*${y} ❯─❮ ${G} %D{%d/%m/%y}${y} ❯─❮ ${Y} ${C}%c${y} ❯─ ❮${B} ${u}%n${y}❯ \$(git_branch)
+${y}└─${B}${z} "
 }
-
-os_version=$(freebsd-version)
-sh_name=$(ps -p $$ -o comm=)
-if [ "$(id -u)" -eq 0 ]; then
-	usr_color="${C_BRT_RED}"
-else
-	usr_color="${C_BRT_GREEN}"
-fi
-
-export PROMPT=$'
-${C_NORM_YELLOW}${C_BRT_RED} ${C_BRT_MAGENTA}${os_version}${C_NORM_YELLOW}─${C_BRT_BLUE} ${C_BRT_MAGENTA}${sh_name}${C_NORM_YELLOW}
-${C_NORM_YELLOW}┌──❮ ${C_BRT_GREEN} %*${C_NORM_YELLOW} ❯─❮ ${C_BRT_GREEN} %D{%d/%m/%y}${C_NORM_YELLOW} ❯─❮ ${C_BRT_YELLOW} ${C_BRT_CYAN}%c${C_NORM_YELLOW} ❯─ ❮${C_BRT_BLUE} ${usr_color}%n${C_NORM_YELLOW}❯ $(show_git_branch)
-${C_NORM_YELLOW}└─${C_BRT_BLUE}${C_RESET} '
 
 ### ################################
 ### SHELL FUNCTIONS
