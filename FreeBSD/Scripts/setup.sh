@@ -296,7 +296,7 @@ done
 alias c++="run_and_update c++"
 alias clang++="run_and_update clang++"
 alias g++="run_and_update g++"
-alias :="update_prompt"
+alias :="update_prompt; command :"
 
 ### ################################
 ### SHELL FUNCTIONS
