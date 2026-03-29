@@ -238,7 +238,7 @@ git_branch() {
 	if command git rev-parse --is-inside-work-tree > "/dev/null" 2>&1; then
 		local branch="$(command git branch --show-current 2> "/dev/null" || command git rev-parse --short HEAD 2> "/dev/null")"
 		if [ -n "$branch" ]; then
-			local is_dirty="$(command git status --short -uno 2> "/dev/null" | tail -n1)"
+			local is_dirty="$(command git status --short -uno 2> "/dev/null" | command tail -n1)"
 			local indicator=""
 			[ -n "$is_dirty" ] && indicator="${Y}*"
 			_git_branch=" ${B}(${R}${branch}${indicator}${B})${z} "
@@ -271,6 +271,7 @@ update_prompt() {
 	export PS1="${u}${cur_user}${B}@${M}${cur_host}${K}:${K}[${Y}${cur_dir}${K}]${z}${_git_branch}${C}\$${z} "
 }
 
+alias :="update_prompt; command :"
 update_prompt
 
 run_and_update() {
@@ -282,32 +283,50 @@ run_and_update() {
 	return $ret
 }
 
-TRIGGERS="cd git gh"
-TRIGGERS="$TRIGGERS make gmake cmake ninja cc clang gcc"
-TRIGGERS="$TRIGGERS zig cargo rustc go gofmt"
-TRIGGERS="$TRIGGERS python python3 pip venv uv poetry"
-TRIGGERS="$TRIGGERS node npm npx yarn pnpm bun"
-TRIGGERS="$TRIGGERS vi vim nvim emacs nano micro edit ee"
-TRIGGERS="$TRIGGERS touch cp mv rm rmdir mkdir"
-TRIGGERS="$TRIGGERS chmod chown ln chflags"
-TRIGGERS="$TRIGGERS cat echo printf tee rg grep"
-TRIGGERS="$TRIGGERS clear ls exa eza find fd"
-TRIGGERS="$TRIGGERS sed awk base64 truncate patch dd"
-TRIGGERS="$TRIGGERS tar 7z zip unzip rar unrar gzip bzip2 xz zstd"
-TRIGGERS="$TRIGGERS fetch wget curl rsync scp sftp aria2c http"
+TRIGGERS_NATIVE="hostname uname id"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE freebsd-version uptime"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE chmod chown chflags su"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE cd touch cp mv rm rmdir mkdir ln"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE clear ls find grep"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE cat echo printf tee head tail less more"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE sed awk patch truncate"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE vi edit ee"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE base64 dd"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE df du"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE top kill killall"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE make cc c++ clang clang++"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE as ld objdump readelf"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE tar gzip bzip2 xz zstd"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE fetch ssh scp sftp"
 
+TRIGGERS_EXTERN="sudo doas"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN git gh"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN gmake cmake ninja"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN gcc g++ zig cargo rustc go gofmt nasm"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN python python3 pip venv uv poetry"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN node npm npx yarn pnpm bun"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN vim nvim emacs nano micro bat"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN rg exa eza fd"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN htop btop"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN neofetch fastfetch ufetch pfetch-rs cpufetch"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN 7z zip unzip rar unrar"
+TRIGGERS_EXTERN="$TRIGGERS_EXTERN wget curl rsync aria2c http"
+
+TRIGGERS="$TRIGGERS_NATIVE $TRIGGERS_EXTERN"
 TRIGGERS=$(echo $TRIGGERS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 for cmd in $TRIGGERS; do
-    if command -v "$cmd" > "/dev/null" 2>&1; then
-        unalias "$cmd" 2> "/dev/null"
-        eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
-    fi
+	if command -v "$cmd" > "/dev/null" 2>&1; then
+		unalias "$cmd" 2> "/dev/null"
+		case "$cmd" in
+			*+*|*-*|*.*)
+				alias "$cmd"="run_and_update $cmd"
+				;;
+			*)
+				eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
+				;;
+		esac
+	fi
 done
-
-alias c++="run_and_update c++"
-alias clang++="run_and_update clang++"
-alias g++="run_and_update g++"
-alias :="update_prompt; command :"
 
 ### ################################
 ### SHELL FUNCTIONS
