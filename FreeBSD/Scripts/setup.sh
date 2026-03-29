@@ -283,14 +283,25 @@ run_and_update() {
 }
 
 TRIGGERS="cd git gh"
-TRIGGERS="$TRIGGERS pkg make cmake ninja cc clang gcc"
+TRIGGERS="$TRIGGERS make gmake cmake ninja cc clang gcc"
+TRIGGERS="$TRIGGERS zig cargo rustc go gofmt"
+TRIGGERS="$TRIGGERS python python3 pip venv uv poetry"
+TRIGGERS="$TRIGGERS node npm npx yarn pnpm bun"
 TRIGGERS="$TRIGGERS vi vim nvim emacs nano micro edit ee"
-TRIGGERS="$TRIGGERS touch cp mv rm rmdir mkdir chmod chown ln"
-TRIGGERS="$TRIGGERS wget curl tar 7z unzip ssh"
+TRIGGERS="$TRIGGERS touch cp mv rm rmdir mkdir"
+TRIGGERS="$TRIGGERS chmod chown ln chflags"
+TRIGGERS="$TRIGGERS cat echo printf tee rg grep"
+TRIGGERS="$TRIGGERS clear ls exa eza find fd"
+TRIGGERS="$TRIGGERS sed awk base64 truncate patch dd"
+TRIGGERS="$TRIGGERS tar 7z zip unzip rar unrar gzip bzip2 xz zstd"
+TRIGGERS="$TRIGGERS fetch wget curl rsync scp sftp aria2c http"
 
+TRIGGERS=$(echo $TRIGGERS | tr ' ' '\n' | sort -u | tr '\n' ' ')
 for cmd in $TRIGGERS; do
-	unalias "$cmd" 2> "/dev/null"
-	eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
+    if command -v "$cmd" > "/dev/null" 2>&1; then
+        unalias "$cmd" 2> "/dev/null"
+        eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
+    fi
 done
 
 alias c++="run_and_update c++"
