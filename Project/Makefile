@@ -42,8 +42,8 @@ run: build
 	@./$(TARGET)
 	@echo "🛑 Servidor Encerrado."
 
-.PHONY: clear clean
-clear clean:
+.PHONY: clean clear
+clean clear:
 	@rm -rf $(OBJDIR) $(TARGET)
 	@echo "🧹 Ambiente Limpo (Objetos e Binários Removidos)."
 
