@@ -191,7 +191,7 @@ sudo chsh -s "$(which sh)" "root"
 
 # Kgx Config
 SHELL_BLOCK="$(mktemp)"
-cat << 'EOF' > "${SHELL_BLOCK}"
+cat << 'EOF' | tee "${SHELL_BLOCK}" > "/dev/null"
 ### ################################
 ### TERMINAL ENVIRONMENT
 ### ################################
@@ -837,7 +837,7 @@ git clone "https://github.com/dracula/micro.git"
 mkdir -p "${HOME}/.config/micro/colorschemes"
 cp "micro/dracula.micro" "${HOME}/.config/micro/colorschemes/dracula.micro"
 sudo rm -f -r micro
-cat << 'EOF' > "${HOME}/.config/micro/settings.json"
+cat << 'EOF' | tee "${HOME}/.config/micro/settings.json" > "/dev/null"
 {
 	"colorscheme": "dracula"
 }
