@@ -11,6 +11,6 @@ typedef enum ip_mode
 	IP_MODE_DUAL_STACK
 } ip_mode_t;
 
-[[nodiscard]] int server_init(uint16_t port, ip_mode_t mode);
+[[nodiscard]] int server_init(const uint16_t port, const ip_mode_t mode);
 
 #endif

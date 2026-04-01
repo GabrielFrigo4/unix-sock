@@ -1,9 +1,11 @@
 # 💻 **Implementação: Servidor HTTP/1.1 RESTful em C (POSIX / FreeBSD & Linux)**
 
-## 🎯 **Arquitetura e Objetivo Técnico (V1)**
- Implementação de um servidor web e API REST robusta em **C puro (C23)**, operando diretamente sobre a API padrão de **Berkeley Sockets**. Este projeto foi desenhado com foco estrito em **portabilidade UNIX (POSIX)**, garantindo execução nativa tanto em ambientes **FreeBSD** quanto **Linux**.
+## 🎯 **Arquitetura e Objetivo Técnico (Versão 1)**
+ Implementação de um servidor web e API REST de alta fidelidade em **C puro (C23)**, operando diretamente sobre a API de **Berkeley Sockets** com foco estrito em **portabilidade UNIX (POSIX)**. O projeto adota um paradigma de **Imutabilidade Funcional** e **Defesa de Memória**, garantindo que o fluxo de dados seja previsível e livre de efeitos colaterais em ambientes **FreeBSD** e **Linux** através do uso rigoroso de qualificadores `const` e `constexpr` em toda a base lógica.
 
  O objetivo primário é a exploração da pilha TCP/IP e a superação das armadilhas clássicas de I/O, adotando o padrão de *Clean Architecture* e *In-Place Parsing*.
+
+ > ⚙️ **Nota de Design:** O uso de qualificadores `const` e `constexpr` em nível de API, combinado com o *parsing in-place*, elimina a necessidade de alocações dinâmicas custosas e garante que o servidor seja imune a efeitos colaterais de memória.
 
 ### ⚙️ **Modelo de Concorrência e Processamento de Rede**
  Para garantir que múltiplas requisições sejam atendidas simultaneamente sem bloqueio de I/O e que o protocolo HTTP seja respeitado rigorosamente, o servidor adota a system call `fork()`, aliada a um sofisticado controle de estado e memória:
@@ -13,52 +15,92 @@
  * **Resiliência a `EINTR`:** O loop de eventos captura e trata *Interrupted System Calls*, garantindo estabilidade durante a limpeza de processos zumbis.
  * **Enquadramento (Framing) TCP Seguro:** O parser HTTP implementa uma máquina de estados resiliente para remontagem de payloads fragmentados na rede, baseando-se dinamicamente no cabeçalho `Content-Length`. Isso imuniza o servidor contra a fragmentação natural da Camada de Transporte.
 
-### ⏱️ **Ciclo de Vida da Conexão (V1)**
+ > ⚙️ **Nota de Resiliência:** A adoção do modelo *multi-process* via `fork()` garante **isolamento total de memória** entre as requisições. Diferente de um modelo baseado em *threads*, uma falha crítica ou corrupção de memória em um processo *worker* (causada por um payload malformado, por exemplo) é contida e não compromete a execução do daemon principal.
+
+### 🧩 Arquitetura de Processamento e Handlers Atômicos
  ```mermaid
  sequenceDiagram
- 	participant C as HTTP Client
- 	participant M as Master (poll)
- 	participant P as Self-Pipe
- 	participant OS as Kernel UNIX
- 	participant W as Child Worker
+ 	participant C as Client (Socket)
+ 	participant H as http_handle_client
+ 	participant A as api_handle_request
+ 	participant HD as Specific Handlers
+ 	participant FS as System File (POSIX)
 
- 	M->>P: setup pipe() & sigaction()
- 	loop Main Event Loop
- 		M->>OS: poll(server_fd, pipe_read_fd)
+ 	C->>H: Request Data (HTTP)
+ 	H->>A: parse_http_request(const req)
 
- 		alt Novo Cliente HTTP
- 			C->>OS: TCP 3-Way Handshake
- 			OS-->>M: POLLIN no server_fd
- 			M->>W: fork()
- 			W->>C: In-Place HTTP Parsing & Response
- 			W->>OS: _exit(0)
-
- 		else Sinal Assíncrono (SIGCHLD)
- 			OS->>M: Kernel emite Sinal
- 			M->>P: write(pipe_write_fd, signo)
- 			OS-->>M: POLLIN no pipe_read_fd
- 			M->>OS: waitpid(WNOHANG) -> Zombie Reaped!
- 		end
+ 	rect rgb(30, 41, 59)
+ 	Note over A: Switch(req->method)
+ 	A->>HD: handle_file_read / write / delete
  	end
+
+ 	HD->>FS: Syscall (fopen/remove)
+ 	FS-->>HD: Status/Data
+ 	HD-->>A: http_response_t
+ 	A-->>H: bool (Handled)
+ 	H->>C: http_send_response
  ```
 
-## ⚡ **Definição dos Métodos RESTful Suportados**
- | Método | Comportamento no Servidor | Finalidade Técnica |
- | --- | --- | --- |
- | **GET** | Leitura via I/O padrão (`fread`) | Recursos estáticos ou serialização JSON. |
- | **POST** | Criação via `fopen(..., "w")` | Criação integral de novos recursos. |
- | **PUT** | Escrita Idempotente | Substituição completa de um recurso existente. |
- | **PATCH** | Modificação via `fopen(..., "a")` | Atualização parcial do recurso *(Nota: implementado via append de I/O em C, como adaptação ao conceito de modificação parcial).* |
- | **DELETE** | Remoção via syscall `remove()` | Exclusão definitiva no sistema de arquivos. |
+ > ⚙️ **Nota de Engenharia:** A arquitetura visual comprova o desacoplamento entre o *parsing* de protocolo e a persistência física. A reescrita da base lógica permitiu a visualização clara da delegação de *handlers*, onde cada método HTTP é processado por funções atômicas e imutáveis.
 
-## 🔨 **Compilação e Deploy**
- O projeto utiliza um `.editorconfig` para padronização global e é gerenciado via `Makefile`. Requer **GCC** com suporte a **C23**.
+### ⚡ **Definição dos Métodos RESTful Suportados**
+ | Método | Comportamento no Servidor | Finalidade Técnica |
+ | :--- | :--- | :--- |
+ | **GET** | I/O de Fluxo Estrito (`fread`) | Recuperação de recursos estáticos ou serialização JSON via buffers imutáveis. |
+ | **POST** | Persistência Atômica (`"w"`) | Criação integral de novos recursos no sistema de arquivos. |
+ | **PUT** | Escrita Idempotente (`"w"`) | Substituição completa e segura de recursos existentes. |
+ | **PATCH** | Persistência Incremental (`"a"`) | Atualização parcial via *append* de I/O, otimizando o overhead de reescrita. |
+ | **DELETE** | Syscall `remove()` | Exclusão definitiva de recursos via manipulação direta de inodes. |
+
+ > ⚙️ **Nota de Persistência:** A tradução direta dos verbos HTTP para modos específicos de I/O (como `w` para **PUT** e `a` para **PATCH**) transforma o sistema de arquivos em um motor de persistência *document-oriented* minimalista. Isso elimina a necessidade de camadas de abstração (ORMs) e garante latência próxima de zero no acesso aos dados.
+
+## 🗂️ **Gestão de Estado e Isolamento de Contexto**
+ Para manter a simplicidade do protocolo HTTP e permitir múltiplas sessões independentes no mesmo cliente, o projeto implementa:
+
+ * **Isolamento via `sessionStorage`:** O estado do jogador (Nickname, Símbolo e ID da Sala) é confinado ao contexto da aba do navegador. Isso permite que um único usuário teste a lógica de jogo abrindo duas abas, sem que uma sobrescreva os dados da outra.
+ * **Sincronização de Estado Atômica:** O Front-End consome a API REST via `async/await`, tratando o JSON do servidor como a única fonte da verdade (*Single Source of Truth*).
+ * **Imutabilidade de UI:** Toda a manipulação do DOM e eventos (como o atalho `Ctrl+S` no editor) é regida por funções puras, espelhando o rigor técnico do Back-End em C.
+
+ > ⚙️ **Nota de Escalabilidade:** Ao delegar a lógica de sessão ao cliente, o servidor é reduzido a um motor puramente computacional. Essa arquitetura *stateless* permite que o sistema escale horizontalmente de forma trivial, já que qualquer instância do servidor pode atender qualquer cliente sem a necessidade de sincronizar estados de memória globais.
+
+### 📊 Topologia de Fluxos e Sincronismo de Estado
+ ```mermaid
+graph TD
+ 	subgraph Browser_Tab_A
+ 		SA[sessionStorage A] -->|Source of Truth| JSA[sala.js]
+ 		JSA -->|Async Polling| API
+ 	end
+
+ 	subgraph Browser_Tab_B
+ 		SB[sessionStorage B] -->|Source of Truth| JSB[sala.js]
+ 		JSB -->|Async Polling| API
+ 	end
+
+ 	subgraph Server_C23
+ 		API((REST API)) -->|POSIX I/O| DB[(./data/*.json)]
+ 	end
+
+ 	style SA fill:#3b82f6,stroke:#fff,color:#fff
+ 	style SB fill:#3b82f6,stroke:#fff,color:#fff
+ 	style API fill:#1e293b,stroke:#3b82f6,color:#fff
+ ```
+
+ > ⚙️ **Nota de Design:** Ao delegar o contexto ao `sessionStorage`, eliminamos colisões de dados no servidor e garantimos a idempotência das operações via API REST, mantendo o servidor 100% livre de estado volátil.
+
+## 🔨 **Compilação e Engenharia de Build**
+ A construção do binário é orquestrada via **Makefile**, exigindo estritamente a suíte **GCC** (ou Clang) com suporte nativo ao padrão **ISO C23**. Para garantir a integridade da arquitetura imutável e a ausência de efeitos colaterais, o processo de compilação impõe um regime de **Zero Warnings** através de flags de diagnóstico rigorosas:
+
+ * **Flags de Rigor:** `-Wall -Wextra -Wpedantic -Werror` — garantem que qualquer inconsistência lógica seja tratada como erro impeditivo.
+ * **Padronização Global:** O projeto utiliza um `.editorconfig` para assegurar a consistência sintática e de indentação entre diferentes ambientes de desenvolvimento.
+ * **Segurança POSIX:** A compilação define macros específicas para garantir a conformidade com as APIs modernas do **IEEE Std 1003.1 (POSIX)**.
 
  ```sh
- make clear
+ make clean
  make build
  make run
  ```
+
+ > ⚙️ **Nota de Qualidade:** O regime de **Zero Warnings** não é apenas uma preferência estética, mas um requisito de segurança que utiliza o compilador como um auditor estático de código para validar a integridade da memória no padrão ISO C23.
 
 ---
 
@@ -109,7 +151,7 @@
 
 Para garantir a reprodutibilidade da compilação, o suporte rigoroso ao padrão **C23** e a estabilidade do servidor, as instruções abaixo configuram o ecossistema de desenvolvimento do zero. Você pode optar por configurar a toolchain via Homebrew ou via APT (recomendado para Ubuntu/Debian).
 
-### 🧰 Setup Utils
+### 🧰 **Setup Utils**
 Instalação das ferramentas de rede e transferência essenciais. O `netcat` é fundamental para testes locais de *raw sockets* e depuração manual do protocolo HTTP, enquanto `curl` e `wget` são necessários para os scripts de automação subsequentes.
  ```bash
  sudo apt install --yes netcat-openbsd
@@ -117,7 +159,7 @@ Instalação das ferramentas de rede e transferência essenciais. O `netcat` é 
  sudo apt install --yes wget
  ```
 
-### 📂 Setup Directory
+### 📂 **Setup Directory**
 Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e o injeta na variável de ambiente `$PATH`. Isso evita a poluição do sistema e garante que as versões customizadas (e mais recentes) dos compiladores tenham prioridade de execução sobre as versões nativas do SO.
  ```bash
  mkdir -p "${HOME}/.local/bin"
@@ -126,7 +168,7 @@ Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e
  EOF
  ```
 
-### 🍺 Setup Brew (Linuxbrew)
+### 🍺 **Setup Brew (Linuxbrew)**
 *(Opcional se utilizar apenas o APT)*. Instalação do gerenciador de pacotes Homebrew. É uma alternativa robusta para obter pacotes na modalidade *bleeding-edge* (as versões mais recentes possíveis), operando no espaço de usuário (User Space) sem comprometer as dependências do sistema operacional.
  ```bash
  sudo -v
@@ -137,7 +179,7 @@ Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e
  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
  ```
 
-### 🧱 Setup GNU Compiler Collection (GCC) — *Via Homebrew*
+### 🧱 **Setup GNU Compiler Collection (GCC)** — *Via Homebrew*
 Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*symlinks*) dinâmicos no seu diretório `~/.local/bin`. O script resolve a versão mais atual lançada no repositório FTP da GNU e mapeia rigorosamente todas as ferramentas da suíte (como `g++`, `gcc-ar`, `gcc-nm`) para uso imediato pelo processo de `make`.
  ```bash
  brew install gcc
@@ -166,7 +208,7 @@ Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*sym
  ln -sf "${HOME}/.local/bin/g++" "${HOME}/.local/bin/CC"
  ```
 
-### 🐧 Setup GNU Compiler Collection (GCC) — *Via APT*
+### 🐧 **Setup GNU Compiler Collection (GCC)** — *Via APT*
 *(Alternativa recomendada para estabilidade no Ubuntu)*. Este bloco adiciona o repositório oficial de testes da toolchain (`ubuntu-toolchain-r/test`), garantindo acesso ao suporte do **C23**. O comando `update-alternatives` é orquestrado para forçar o Kernel a adotar esta versão recém-instalada como o padrão absoluto de compilação C/C++ em todo o ambiente.
  ```bash
  sudo add-apt-repository --yes "ppa:ubuntu-toolchain-r/test"
@@ -186,7 +228,7 @@ Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*sym
  	--slave "/usr/bin/gcc-ranlib" gcc-ranlib "/usr/bin/gcc-ranlib-$GCC_VER"
  ```
 
-### 🐉 Setup Clang / LLVM Toolchain
+### 🐉 **Setup Clang / LLVM Toolchain**
 Instalação da arquitetura de compiladores LLVM/Clang. Fortemente recomendada devido às suas excelentes ferramentas de *linting*, *Language Server Protocol* (`clangd`) e sanitização de memória. O script utiliza o instalador dinâmico oficial (`llvm.sh`), extrai a versão estável mais atual da API do GitHub, normaliza as chaves do repositório APT e registra o ecossistema completo no sistema de alternativas.
  ```bash
  sudo apt update

@@ -5,4 +5,4 @@
 
  | Arquivo Estrutural | Foco | Visão Geral do Conteúdo |
  | :--- | :--- | :--- |
- | **[`Layers.md`](./Layers.md)** | 🏗️ O Fluxo HTTP | A anatomia completa de uma requisição real. Traça o *Data Path* dinâmico desde a geração no cliente, o *Handshake* TCP, o roteamento MAC/IP, até o desencapsulamento no servidor web. |
+ | **[`Layers.md`](./Layers.md)** | 🏗️ *O Fluxo HTTP* | A anatomia completa de uma requisição real. Traça o *Data Path* dinâmico desde a geração no cliente, o *Handshake* TCP, o roteamento MAC/IP, até o desencapsulamento no servidor web. |

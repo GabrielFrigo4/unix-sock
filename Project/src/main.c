@@ -18,14 +18,14 @@ constexpr size_t POLL_EVENT_COUNT = 2;
 
 static int sig_pipe[PIPE_FD_COUNT];
 
-static void generic_signal_handler(int signum)
+static void generic_signal_handler(const int signum)
 {
-	int saved_errno = errno;
+	const int saved_errno = errno;
 	(void)!write(sig_pipe[1], &signum, sizeof(int));
 	errno = saved_errno;
 }
 
-static int setup_self_pipe()
+static int setup_self_pipe(void)
 {
 	if (pipe(sig_pipe) == -1)
 	{
@@ -33,15 +33,13 @@ static int setup_self_pipe()
 		return -1;
 	}
 
-	int flags = fcntl(sig_pipe[0], F_GETFL, 0);
-	fcntl(sig_pipe[0], F_SETFL, flags | O_NONBLOCK);
-	flags = fcntl(sig_pipe[1], F_GETFL, 0);
-	fcntl(sig_pipe[1], F_SETFL, flags | O_NONBLOCK);
+	const int flags_read = fcntl(sig_pipe[0], F_GETFL, 0);
+	fcntl(sig_pipe[0], F_SETFL, flags_read | O_NONBLOCK);
 
-	struct sigaction sa = {0};
-	sa.sa_handler = generic_signal_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
+	const int flags_write = fcntl(sig_pipe[1], F_GETFL, 0);
+	fcntl(sig_pipe[1], F_SETFL, flags_write | O_NONBLOCK);
+
+	const struct sigaction sa = {.sa_handler = generic_signal_handler, .sa_flags = SA_RESTART};
 
 	if (sigaction(SIGINT, &sa, nullptr) == -1 || sigaction(SIGTSTP, &sa, nullptr) == -1 ||
 	    sigaction(SIGCHLD, &sa, nullptr) == -1)
@@ -53,7 +51,7 @@ static int setup_self_pipe()
 	return sig_pipe[0];
 }
 
-static void process_signals(int pipe_read_fd, int *running)
+static void process_signals(const int pipe_read_fd, int *const running)
 {
 	int signum;
 	while (read(pipe_read_fd, &signum, sizeof(int)) == sizeof(int))
@@ -64,10 +62,12 @@ static void process_signals(int pipe_read_fd, int *running)
 			pid_t pid;
 			while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 			{
-				printf("[INFO]: Zombie reaped (PID: %d)\n", pid);
+				printf("[INFO]: Zombie reaped (PID: %d)\n", (int)pid);
 			}
+			continue;
 		}
-		else if (signum == SIGINT || signum == SIGTSTP)
+
+		if (signum == SIGINT || signum == SIGTSTP)
 		{
 			printf("\n[INFO]: Shutdown signal received...\n");
 			*running = 0;
@@ -75,11 +75,21 @@ static void process_signals(int pipe_read_fd, int *running)
 	}
 }
 
-static void accept_and_fork(int server_fd)
+static void handle_child_process(const int server_fd, const int client_socket)
+{
+	close(server_fd);
+	close(sig_pipe[0]);
+	close(sig_pipe[1]);
+	http_handle_client(client_socket);
+	close(client_socket);
+	_exit(EXIT_SUCCESS);
+}
+
+static void accept_and_fork(const int server_fd)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
-	int client_socket = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
+	const int client_socket = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
 
 	if (client_socket < 0)
 	{
@@ -89,32 +99,32 @@ static void accept_and_fork(int server_fd)
 
 	printf("[INFO]: New socket created: %d\n", client_socket);
 
-	switch (fork())
+	const pid_t pid = fork();
+
+	if (pid < 0)
 	{
-	case -1:
 		close(client_socket);
 		perror("[ERRO]: fork");
-		break;
-	case 0:
-		close(server_fd);
-		close(sig_pipe[0]);
-		close(sig_pipe[1]);
-		http_handle_client(client_socket);
-		close(client_socket);
-		_exit(EXIT_SUCCESS);
-	default:
-		close(client_socket);
-		break;
+		return;
 	}
+
+	if (pid == 0)
+	{
+		handle_child_process(server_fd, client_socket);
+	}
+
+	close(client_socket);
 }
 
-int main()
+int main(void)
 {
-	int pipe_read_fd = setup_self_pipe();
+	const int pipe_read_fd = setup_self_pipe();
 	if (pipe_read_fd == -1)
+	{
 		return EXIT_FAILURE;
+	}
 
-	int server_fd = server_init(PORT, IP_MODE_DUAL_STACK);
+	const int server_fd = server_init(PORT, IP_MODE_DUAL_STACK);
 
 	struct pollfd fds[POLL_EVENT_COUNT] = {
 	    {.fd = server_fd, .events = POLLIN, .revents = 0},
@@ -125,7 +135,7 @@ int main()
 
 	while (running)
 	{
-		int poll_result = poll(fds, POLL_EVENT_COUNT, -1);
+		const int poll_result = poll(fds, POLL_EVENT_COUNT, -1);
 
 		if (poll_result < 0)
 		{
@@ -152,5 +162,6 @@ int main()
 	close(server_fd);
 	close(sig_pipe[0]);
 	close(sig_pipe[1]);
+
 	return EXIT_SUCCESS;
 }

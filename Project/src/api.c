@@ -23,287 +23,215 @@ constexpr size_t PATH_BUFFER_SIZE = 1024;
 constexpr size_t RESP_BUFFER_SIZE = 8192;
 constexpr size_t AUTH_HEADER_BUFFER_SIZE = 1024;
 
-static void ensure_data_directory()
+static void ensure_data_directory(void)
 {
 	struct stat st = {};
 	if (stat(DATA_DIR, &st) == -1)
+	{
 		mkdir(DATA_DIR, 0755);
+	}
 }
 
-static bool requires_auth(http_request_t *req)
+static bool requires_auth(const http_request_t *const req)
 {
 	if (req->method == HTTP_DELETE)
-		return true;
-
-	if (strcmp(req->path, ROUTE_EDITOR) == 0 || strcmp(req->path, ROUTE_EDITOR_HTML) == 0)
 	{
 		return true;
 	}
-	return false;
+
+	const bool is_editor_route = strcmp(req->path, ROUTE_EDITOR) == 0;
+	const bool is_editor_html = strcmp(req->path, ROUTE_EDITOR_HTML) == 0;
+
+	return is_editor_route || is_editor_html;
 }
 
-static bool is_authenticated(http_request_t *req)
+static bool is_authenticated(const http_request_t *const req)
 {
 	for (size_t i = 0; i < req->header_count; i++)
 	{
 		if (strcmp(req->headers[i].key, "Authorization") == 0)
 		{
-			if (strcmp(req->headers[i].value, AUTH_CREDENTIALS) == 0)
-			{
-				return true;
-			}
+			return strcmp(req->headers[i].value, AUTH_CREDENTIALS) == 0;
 		}
 	}
 	return false;
 }
 
-static void api_handle_get(int client_socket, http_request_t *req)
+static void send_unauthorized(const int client_socket)
 {
-	if (strcmp(req->path, API_FILES_ROUTE) == 0)
+	const char *const body = "Não autorizado. Credenciais incorretas ou ausentes.";
+	char header_buffer[AUTH_HEADER_BUFFER_SIZE];
+
+	snprintf(
+	    header_buffer,
+	    sizeof(header_buffer),
+	    "HTTP/1.1 401 Unauthorized\r\n"
+	    "WWW-Authenticate: Basic realm=\"%s\"\r\n"
+	    "Content-Length: %zu\r\n"
+	    "Connection: close\r\n\r\n"
+	    "%s",
+	    AUTH_REALM,
+	    strlen(body),
+	    body
+	);
+
+	send(client_socket, header_buffer, strlen(header_buffer), 0);
+}
+
+static void handle_list_files(const int client_socket)
+{
+	DIR *const dir = opendir(DATA_DIR);
+	if (!dir)
 	{
-		DIR *dir;
-		struct dirent *ent;
-		char json_list[RESP_BUFFER_SIZE] = "[";
-		size_t offset = 1;
-
-		if ((dir = opendir(DATA_DIR)) != nullptr)
-		{
-			while ((ent = readdir(dir)) != nullptr)
-			{
-				if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-					continue;
-
-				char filepath[PATH_BUFFER_SIZE];
-				snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, ent->d_name);
-
-				struct stat st;
-				if (stat(filepath, &st) == 0 && S_ISREG(st.st_mode))
-				{
-					if (offset > 1)
-					{
-						offset += (size_t)snprintf(
-						    json_list + offset, sizeof(json_list) - offset, ","
-						);
-					}
-					offset += (size_t)snprintf(
-					    json_list + offset, sizeof(json_list) - offset, "\"%s\"", ent->d_name
-					);
-				}
-			}
-			closedir(dir);
-		}
-		snprintf(json_list + offset, sizeof(json_list) - offset, "]");
-
-		http_response_t res = {};
-		res.status_code = HTTP_STATUS_OK;
-		res.status_message = "OK";
-		res.content_type = "application/json";
-		res.body = json_list;
-		res.body_len = strlen(json_list);
-		http_send_response(client_socket, &res);
+		http_send_error(
+		    client_socket, 500, "Internal Server Error", "Erro ao abrir diretório."
+		);
 		return;
 	}
 
-	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
+	char json_list[RESP_BUFFER_SIZE] = "[";
+	size_t offset = 1;
+	struct dirent *ent;
+
+	while ((ent = readdir(dir)) != nullptr)
 	{
-		const char *filename = req->path + strlen(API_DATA_PREFIX);
-		if (strchr(filename, '/') != nullptr)
+		if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
 		{
-			http_send_error(
-			    client_socket,
-			    HTTP_STATUS_FORBIDDEN,
-			    "Forbidden",
-			    "Subdiretórios não permitidos."
-			);
-			return;
+			continue;
 		}
 
 		char filepath[PATH_BUFFER_SIZE];
-		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
+		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, ent->d_name);
 
 		struct stat st;
-		if (stat(filepath, &st) == -1)
+		if (stat(filepath, &st) == 0 && S_ISREG(st.st_mode))
 		{
-			http_send_error(
-			    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Arquivo não encontrado."
-			);
-			return;
-		}
-
-		http_response_t res = {};
-		res.status_code = HTTP_STATUS_OK;
-		res.status_message = "OK";
-		res.content_type = "text/plain";
-		res.file_path = filepath;
-		http_send_response(client_socket, &res);
-		return;
-	}
-
-	http_send_error(
-	    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota de API inexistente."
-	);
-}
-
-static void api_handle_post(int client_socket, http_request_t *req)
-{
-	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
-	{
-		const char *filename = req->path + strlen(API_DATA_PREFIX);
-		if (strchr(filename, '/') != nullptr)
-			return;
-
-		char filepath[PATH_BUFFER_SIZE];
-		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
-
-		FILE *f = fopen(filepath, "w");
-		if (f)
-		{
-			if (req->body)
-				fwrite(req->body, 1, strlen(req->body), f);
-			fclose(f);
-		}
-
-		http_response_t res = {};
-		res.status_code = HTTP_STATUS_OK;
-		res.status_message = "OK";
-		res.content_type = "text/plain";
-		res.body = "Criado/Atualizado com sucesso (POST)!";
-		res.body_len = strlen(res.body);
-		http_send_response(client_socket, &res);
-		return;
-	}
-
-	http_send_error(
-	    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota POST desconhecida."
-	);
-}
-
-static void api_handle_put(int client_socket, http_request_t *req)
-{
-	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
-	{
-		const char *filename = req->path + strlen(API_DATA_PREFIX);
-		if (strchr(filename, '/') != nullptr)
-			return;
-
-		char filepath[PATH_BUFFER_SIZE];
-		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
-
-		FILE *f = fopen(filepath, "w");
-		if (f)
-		{
-			if (req->body)
-				fwrite(req->body, 1, strlen(req->body), f);
-			fclose(f);
-		}
-
-		http_response_t res = {};
-		res.status_code = HTTP_STATUS_OK;
-		res.status_message = "OK";
-		res.content_type = "text/plain";
-		res.body = "Substituído com sucesso (PUT)!";
-		res.body_len = strlen(res.body);
-		http_send_response(client_socket, &res);
-		return;
-	}
-
-	http_send_error(
-	    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota PUT desconhecida."
-	);
-}
-
-static void api_handle_patch(int client_socket, http_request_t *req)
-{
-	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
-	{
-		const char *filename = req->path + strlen(API_DATA_PREFIX);
-		if (strchr(filename, '/') != nullptr)
-			return;
-
-		char filepath[PATH_BUFFER_SIZE];
-		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
-
-		FILE *f = fopen(filepath, "a");
-		if (f)
-		{
-			if (req->body)
-				fwrite(req->body, 1, strlen(req->body), f);
-			fclose(f);
-		}
-
-		http_response_t res = {};
-		res.status_code = HTTP_STATUS_OK;
-		res.status_message = "OK";
-		res.content_type = "text/plain";
-		res.body = "Modificado parcialmente com sucesso (PATCH)!";
-		res.body_len = strlen(res.body);
-		http_send_response(client_socket, &res);
-		return;
-	}
-
-	http_send_error(
-	    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota PATCH desconhecida."
-	);
-}
-
-static void api_handle_delete(int client_socket, http_request_t *req)
-{
-	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
-	{
-		const char *filename = req->path + strlen(API_DATA_PREFIX);
-		if (strchr(filename, '/') != nullptr)
-			return;
-
-		char filepath[PATH_BUFFER_SIZE];
-		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
-
-		if (remove(filepath) == 0)
-		{
-			http_send_error(
-			    client_socket, HTTP_STATUS_OK, "OK", "Arquivo apagado com sucesso (DELETE)."
+			const char *const separator = (offset > 1) ? "," : "";
+			offset += (size_t)snprintf(
+			    json_list + offset,
+			    sizeof(json_list) - offset,
+			    "%s\"%s\"",
+			    separator,
+			    ent->d_name
 			);
 		}
-		else
-		{
-			http_send_error(
-			    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Erro ao apagar arquivo."
-			);
-		}
-		return;
 	}
-	http_send_error(
-	    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota DELETE desconhecida."
-	);
+	closedir(dir);
+
+	snprintf(json_list + offset, sizeof(json_list) - offset, "]");
+
+	const http_response_t res = {
+	    .status_code = HTTP_STATUS_OK,
+	    .status_message = "OK",
+	    .content_type = "application/json",
+	    .body = json_list,
+	    .body_len = strlen(json_list)
+	};
+	http_send_response(client_socket, &res);
 }
 
-bool api_handle_request(int client_socket, http_request_t *req)
+static void handle_file_read(const int client_socket, const http_request_t *const req)
 {
-	static bool dirs_checked = false;
-	if (!dirs_checked)
+	const char *const filename = req->path + strlen(API_DATA_PREFIX);
+	if (strchr(filename, '/') != nullptr)
+	{
+		http_send_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
+		return;
+	}
+
+	char filepath[PATH_BUFFER_SIZE];
+	snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
+
+	struct stat st;
+	if (stat(filepath, &st) == -1)
+	{
+		http_send_error(
+		    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Arquivo inexistente."
+		);
+		return;
+	}
+
+	const http_response_t res = {
+	    .status_code = HTTP_STATUS_OK,
+	    .status_message = "OK",
+	    .content_type = "text/plain",
+	    .file_path = filepath
+	};
+	http_send_response(client_socket, &res);
+}
+
+static void handle_file_write(
+    const int client_socket, const http_request_t *const req, const char *const mode,
+    const char *const success_msg
+)
+{
+	const char *const filename = req->path + strlen(API_DATA_PREFIX);
+	if (strchr(filename, '/') != nullptr)
+	{
+		http_send_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
+		return;
+	}
+
+	char filepath[PATH_BUFFER_SIZE];
+	snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
+
+	FILE *const f = fopen(filepath, mode);
+	if (!f)
+	{
+		http_send_error(client_socket, 500, "Internal Server Error", "Erro ao abrir arquivo.");
+		return;
+	}
+
+	if (req->body)
+	{
+		fwrite(req->body, 1, strlen(req->body), f);
+	}
+	fclose(f);
+
+	const http_response_t res = {
+	    .status_code = HTTP_STATUS_OK,
+	    .status_message = "OK",
+	    .content_type = "text/plain",
+	    .body = success_msg,
+	    .body_len = strlen(success_msg)
+	};
+	http_send_response(client_socket, &res);
+}
+
+static void handle_file_delete(const int client_socket, const http_request_t *const req)
+{
+	const char *const filename = req->path + strlen(API_DATA_PREFIX);
+	if (strchr(filename, '/') != nullptr)
+	{
+		http_send_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
+		return;
+	}
+
+	char filepath[PATH_BUFFER_SIZE];
+	snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, filename);
+
+	if (remove(filepath) == 0)
+	{
+		http_send_error(client_socket, HTTP_STATUS_OK, "OK", "Removido com sucesso.");
+	}
+	else
+	{
+		http_send_error(client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Erro ao remover.");
+	}
+}
+
+bool api_handle_request(const int client_socket, http_request_t *const req)
+{
+	static bool initialized = false;
+	if (!initialized)
 	{
 		ensure_data_directory();
-		dirs_checked = true;
+		initialized = true;
 	}
 
 	if (requires_auth(req) && !is_authenticated(req))
 	{
-		char header_buffer[AUTH_HEADER_BUFFER_SIZE];
-		const char *body = "Não autorizado. Credenciais incorretas ou ausentes.";
-
-		snprintf(
-		    header_buffer,
-		    sizeof(header_buffer),
-		    "HTTP/1.1 401 Unauthorized\r\n"
-		    "WWW-Authenticate: Basic realm=\"%s\"\r\n"
-		    "Content-Length: %zu\r\n"
-		    "Connection: close\r\n\r\n"
-		    "%s",
-		    AUTH_REALM,
-		    strlen(body),
-		    body
-		);
-
-		send(client_socket, header_buffer, strlen(header_buffer), 0);
+		send_unauthorized(client_socket);
 		return true;
 	}
 
@@ -312,32 +240,38 @@ bool api_handle_request(int client_socket, http_request_t *req)
 		return false;
 	}
 
-	switch (req->method)
+	if (strcmp(req->path, API_FILES_ROUTE) == 0 && req->method == HTTP_GET)
 	{
-	case HTTP_GET:
-		api_handle_get(client_socket, req);
-		break;
-	case HTTP_POST:
-		api_handle_post(client_socket, req);
-		break;
-	case HTTP_PUT:
-		api_handle_put(client_socket, req);
-		break;
-	case HTTP_PATCH:
-		api_handle_patch(client_socket, req);
-		break;
-	case HTTP_DELETE:
-		api_handle_delete(client_socket, req);
-		break;
-	default:
-		http_send_error(
-		    client_socket,
-		    HTTP_STATUS_NOT_ALLOWED,
-		    "Method Not Allowed",
-		    "Método não suportado na API."
-		);
-		break;
+		handle_list_files(client_socket);
+		return true;
 	}
 
+	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
+	{
+		switch (req->method)
+		{
+		case HTTP_GET:
+			handle_file_read(client_socket, req);
+			break;
+		case HTTP_POST:
+			handle_file_write(client_socket, req, "w", "Criado com sucesso.");
+			break;
+		case HTTP_PUT:
+			handle_file_write(client_socket, req, "w", "Atualizado com sucesso.");
+			break;
+		case HTTP_PATCH:
+			handle_file_write(client_socket, req, "a", "Modificado com sucesso.");
+			break;
+		case HTTP_DELETE:
+			handle_file_delete(client_socket, req);
+			break;
+		default:
+			http_send_error(client_socket, 405, "Method Not Allowed", "Método não permitido.");
+			break;
+		}
+		return true;
+	}
+
+	http_send_error(client_socket, 404, "Not Found", "Rota inexistente.");
 	return true;
 }

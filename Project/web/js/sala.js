@@ -1,119 +1,135 @@
-const urlParams = new URLSearchParams(window.location.search);
-const arquivoSala = urlParams.get('sala');
-const jogador = urlParams.get('jogador');
-const meuSimbolo = urlParams.get('simbolo');
+const Config = {
+    roomFile: sessionStorage.getItem('sala'),
+    playerName: sessionStorage.getItem('jogador'),
+    playerSymbol: sessionStorage.getItem('simbolo')
+};
 
-document.getElementById('lblSala').textContent = arquivoSala.replace('sala_', '').replace('.json', '');
-document.getElementById('lblJogador').textContent = jogador;
-document.getElementById('lblSimbolo').textContent = meuSimbolo;
-
-const statusBanner = document.getElementById('statusTurno');
-const celulas = document.querySelectorAll('.cell');
-
-let estadoJogo = null;
-let atualizandoServidor = false;
-
-function buscarEstadoServidor() {
-    if (atualizandoServidor) return;
-    fetch('/api/data/' + arquivoSala)
-        .then(res => res.json())
-        .then(data => {
-            estadoJogo = data;
-            if (meuSimbolo === 'O' && estadoJogo.players.O === null) {
-                estadoJogo.players.O = jogador;
-                atualizandoServidor = true;
-                fetch('/api/data/' + arquivoSala, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(estadoJogo)
-                }).finally(() => {
-                    atualizandoServidor = false;
-                });
-            }
-            atualizarInterface();
-        })
-        .catch(err => console.error("Sala excluída ou erro de conexão.", err));
+if (!Config.roomFile || !Config.playerName || !Config.playerSymbol) {
+    window.location.href = "/";
 }
 
-function atualizarInterface() {
-    if (!estadoJogo) return;
+const UI = {
+    roomLabel: document.getElementById('lblSala'),
+    playerLabel: document.getElementById('lblJogador'),
+    symbolLabel: document.getElementById('lblSimbolo'),
+    statusBanner: document.getElementById('statusTurno'),
+    cells: document.querySelectorAll('.cell')
+};
 
-    for (let i = 0; i < 9; i++) {
-        celulas[i].textContent = estadoJogo.board[i];
-        celulas[i].className = `cell ${estadoJogo.board[i]}`;
-    }
+UI.roomLabel.textContent = Config.roomFile.replace('sala_', '').replace('.json', '');
+UI.playerLabel.textContent = Config.playerName;
+UI.symbolLabel.textContent = Config.playerSymbol;
 
-    if (estadoJogo.winner) {
-        statusBanner.className = "status-banner fim-jogo";
-        if (estadoJogo.winner === "Empate") {
-            statusBanner.textContent = "Deu Velha! (Empate)";
-        } else {
-            statusBanner.textContent = `Vitória do ${estadoJogo.winner}! 🎉`;
-        }
-        return;
-    }
+const State = {
+    gameData: null,
+    isUpdating: false
+};
 
-    if (estadoJogo.turn === meuSimbolo) {
-        statusBanner.textContent = "Sua vez de jogar!";
-        statusBanner.className = "status-banner vez-ativa";
-    } else {
-        statusBanner.textContent = `Aguardando oponente (${estadoJogo.turn})...`;
-        statusBanner.className = "status-banner vez-espera";
-    }
-}
-
-function jogar(indice) {
-    if (!estadoJogo || estadoJogo.winner) return;
-    if (estadoJogo.turn !== meuSimbolo) {
-        alert("Não é a sua vez!");
-        return;
-    }
-    if (estadoJogo.board[indice] !== "") {
-        return;
-    }
-
-    estadoJogo.board[indice] = meuSimbolo;
-    verificarVencedor();
-
-    if (!estadoJogo.winner && !estadoJogo.board.includes("")) {
-        estadoJogo.winner = "Empate";
-    } else if (!estadoJogo.winner) {
-        estadoJogo.turn = meuSimbolo === 'X' ? 'O' : 'X';
-    }
-
-    atualizarInterface();
-
-    atualizandoServidor = true;
-    fetch('/api/data/' + arquivoSala, {
+const syncWithServer = async () => {
+    State.isUpdating = true;
+    await fetch(`/api/data/${Config.roomFile}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(estadoJogo)
-    }).finally(() => {
-        atualizandoServidor = false;
+        body: JSON.stringify(State.gameData)
     });
-}
+    State.isUpdating = false;
+};
 
-function verificarVencedor() {
-    const vitorias = [
+const renderGameOver = () => {
+    const { winner, players } = State.gameData;
+    if (winner === "Empate") {
+        UI.statusBanner.className = "status-banner empate";
+        UI.statusBanner.textContent = "Deu Velha! (Empate)";
+    } else if (winner === Config.playerSymbol) {
+        UI.statusBanner.className = "status-banner vitoria";
+        UI.statusBanner.textContent = `Vitória! Parabéns, ${Config.playerName}! 🎉`;
+    } else {
+        UI.statusBanner.className = "status-banner derrota";
+        const winnerName = winner === 'X' ? players.X : players.O;
+        UI.statusBanner.textContent = `Derrota! Vitória de ${winnerName} 😢`;
+    }
+};
+
+const updateInterface = () => {
+    if (!State.gameData) return;
+
+    UI.cells.forEach((cell, index) => {
+        const value = State.gameData.board[index];
+        cell.textContent = value;
+        cell.className = `cell ${value}`;
+    });
+
+    if (State.gameData.winner) return renderGameOver();
+
+    const isMyTurn = State.gameData.turn === Config.playerSymbol;
+    UI.statusBanner.textContent = isMyTurn ? "Sua vez de jogar!" : `Aguardando oponente (${State.gameData.turn})...`;
+    UI.statusBanner.className = `status-banner ${isMyTurn ? 'vez-ativa' : 'vez-espera'}`;
+};
+
+const fetchServerState = async () => {
+    if (State.isUpdating || (State.gameData?.winner)) return;
+
+    try {
+        const res = await fetch(`/api/data/${Config.roomFile}`);
+        const data = await res.json();
+        
+        if (State.isUpdating) return;
+        State.gameData = data;
+
+        if (Config.playerSymbol === 'O' && !State.gameData.players.O) {
+            State.gameData.players.O = Config.playerName;
+            await syncWithServer();
+        }
+        updateInterface();
+    } catch (e) {
+        console.error("Erro ao buscar estado:", e);
+    }
+};
+
+const checkWinner = () => {
+    const winningCombos = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8],
         [0, 3, 6], [1, 4, 7], [2, 5, 8],
         [0, 4, 8], [2, 4, 6]
     ];
 
-    for (let combo of vitorias) {
-        const [a, b, c] = combo;
-        if (estadoJogo.board[a] &&
-            estadoJogo.board[a] === estadoJogo.board[b] &&
-            estadoJogo.board[a] === estadoJogo.board[c]) {
-            estadoJogo.winner = estadoJogo.board[a];
+    for (const [a, b, c] of winningCombos) {
+        const board = State.gameData.board;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+            State.gameData.winner = board[a];
             return;
         }
     }
-}
+};
 
-function voltarParaLobby() {
+window.jogar = async (index) => {
+    if (!State.gameData || State.gameData.winner || State.gameData.turn !== Config.playerSymbol || State.gameData.board[index]) return;
+
+    State.gameData.board[index] = Config.playerSymbol;
+    checkWinner();
+
+    if (!State.gameData.winner) {
+        const isBoardFull = !State.gameData.board.includes("");
+        if (isBoardFull) State.gameData.winner = "Empate";
+        else State.gameData.turn = Config.playerSymbol === 'X' ? 'O' : 'X';
+    }
+
+    updateInterface();
+    await syncWithServer();
+
+    if (State.gameData.winner) {
+        setTimeout(async () => {
+            await fetch(`/api/data/${Config.roomFile}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Basic YWRtaW46YWRtaW4=' }
+            });
+        }, 1536);
+    }
+};
+
+window.voltarParaLobby = () => {
     window.location.href = "/";
-}
+};
 
-setInterval(buscarEstadoServidor, 512);
-buscarEstadoServidor();
+setInterval(fetchServerState, 512);
+fetchServerState();

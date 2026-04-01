@@ -1,4 +1,8 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -15,14 +19,21 @@ body {
     background: #334155;
     padding: 30px;
     border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     text-align: center;
     max-width: 400px;
     width: 100%;
 }
 
-.highlight { color: #3b82f6; font-weight: bold; }
-#lblSimbolo { font-size: 1.2em; color: #10b981; }
+.highlight {
+    color: #3b82f6;
+    font-weight: bold;
+}
+
+#lblSimbolo {
+    font-size: 1.2em;
+    color: #10b981;
+}
 
 .status-banner {
     margin: 20px 0;
@@ -34,9 +45,33 @@ body {
     border: 2px solid #475569;
 }
 
-.vez-ativa { border-color: #10b981; color: #10b981; }
-.vez-espera { border-color: #f59e0b; color: #f59e0b; }
-.fim-jogo { border-color: #ef4444; color: #ef4444; background: #7f1d1d; }
+.vez-ativa {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.vez-espera {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.vitoria {
+    border-color: #10b981;
+    color: #10b981;
+    background: #022c22;
+}
+
+.derrota {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #450a0a;
+}
+
+.empate {
+    border-color: #f59e0b;
+    color: #f59e0b;
+    background: #451a03;
+}
 
 .board {
     display: grid;
@@ -59,9 +94,17 @@ body {
     user-select: none;
 }
 
-.cell:hover { background: #475569; }
-.cell.X { color: #3b82f6; }
-.cell.O { color: #ef4444; }
+.cell:hover {
+    background: #475569;
+}
+
+.cell.X {
+    color: #3b82f6;
+}
+
+.cell.O {
+    color: #ef4444;
+}
 
 .btn-voltar {
     background: #ef4444;
@@ -75,4 +118,6 @@ body {
     transition: 0.2s;
 }
 
-.btn-voltar:hover { background: #dc2626; }
+.btn-voltar:hover {
+    background: #dc2626;
+}

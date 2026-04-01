@@ -24,15 +24,15 @@ typedef enum http_method
 
 typedef struct http_header
 {
-	char *key;
-	char *value;
+	const char *key;
+	const char *value;
 } http_header_t;
 
 typedef struct http_request
 {
 	http_method_t method;
-	char *path;
-	char *version;
+	const char *path;
+	const char *version;
 	size_t header_count;
 	http_header_t headers[MAX_HTTP_HEADERS];
 	size_t body_len;
@@ -51,10 +51,11 @@ typedef struct http_response
 	const char *file_path;
 } http_response_t;
 
-void http_send_response(int client_socket, http_response_t *res);
+void http_send_response(const int client_socket, const http_response_t *const res);
 void http_send_error(
-    int client_socket, int status_code, const char *status_msg, const char *body
+    const int client_socket, const int status_code, const char *const status_msg,
+    const char *const body
 );
-void http_handle_client(int client_socket);
+void http_handle_client(const int client_socket);
 
 #endif
