@@ -9,6 +9,7 @@ constexpr int HTTP_STATUS_UNAUTHORIZED = 401;
 constexpr int HTTP_STATUS_FORBIDDEN = 403;
 constexpr int HTTP_STATUS_NOT_FOUND = 404;
 constexpr int HTTP_STATUS_NOT_ALLOWED = 405;
+constexpr int HTTP_STATUS_URI_TOO_LONG = 414;
 
 constexpr size_t MAX_HTTP_HEADERS = 32;
 
@@ -39,6 +40,12 @@ typedef struct http_request
 	char *body;
 } http_request_t;
 
+typedef enum response_mode
+{
+	RES_MODE_MEMORY,
+	RES_MODE_FILE
+} response_mode_t;
+
 typedef struct http_response
 {
 	int status_code;
@@ -46,13 +53,20 @@ typedef struct http_response
 	const char *content_type;
 	size_t header_count;
 	http_header_t headers[MAX_HTTP_HEADERS];
-	size_t body_len;
-	const char *body;
-	const char *file_path;
+	response_mode_t mode;
+	union
+	{
+		struct
+		{
+			size_t body_len;
+			const char *body;
+		};
+		const char *file_path;
+	};
 } http_response_t;
 
 void http_send_response(const int client_socket, const http_response_t *const res);
-void http_send_error(
+void http_send_status(
     const int client_socket, const int status_code, const char *const status_msg,
     const char *const body
 );

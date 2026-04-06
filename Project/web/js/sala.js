@@ -72,7 +72,7 @@ const fetchServerState = async () => {
     try {
         const res = await fetch(`/api/data/${Config.roomFile}`);
         const data = await res.json();
-        
+
         if (State.isUpdating) return;
         State.gameData = data;
 
@@ -116,15 +116,6 @@ window.jogar = async (index) => {
 
     updateInterface();
     await syncWithServer();
-
-    if (State.gameData.winner) {
-        setTimeout(async () => {
-            await fetch(`/api/data/${Config.roomFile}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Basic YWRtaW46YWRtaW4=' }
-            });
-        }, 1536);
-    }
 };
 
 window.voltarParaLobby = () => {

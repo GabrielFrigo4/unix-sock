@@ -62,6 +62,7 @@ static void log_server_addresses(const uint16_t port, const ip_mode_t mode)
 	}
 
 	freeifaddrs(interfaces);
+	interfaces = nullptr;
 	printf("\n[INFO]: Pressione Ctrl+C para encerrar o servidor.\n\n");
 }
 

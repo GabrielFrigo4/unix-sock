@@ -16,6 +16,10 @@ constexpr size_t RECV_BUFFER_SIZE = 8192;
 constexpr size_t PATH_BUFFER_SIZE = 1024;
 constexpr size_t HEADER_BUFFER_SIZE = 1024;
 constexpr size_t FILE_CHUNK_SIZE = 8192;
+constexpr size_t MAX_PAYLOAD_SIZE = 1 << 22;
+
+constexpr size_t URI_SAFETY_MARGIN = 256;
+constexpr size_t MAX_SAFE_URI_LEN = PATH_BUFFER_SIZE - URI_SAFETY_MARGIN;
 
 static void ensure_static_directory(void)
 {
@@ -263,23 +267,28 @@ void http_send_response(const int client_socket, const http_response_t *const re
 		    res->headers[i].key,
 		    res->headers[i].value
 		);
-		if (h_ret > 0)
+		if (h_ret > 0 && (size_t)h_ret < (sizeof(header_buffer) - offset))
 		{
 			offset += (size_t)h_ret;
 		}
+		else
+		{
+			break;
+		}
 	}
 
-	if (res->file_path)
+	switch (res->mode)
 	{
-		send_file_response(client_socket, res, header_buffer, offset);
-	}
-	else
-	{
+	case RES_MODE_MEMORY:
 		send_body_response(client_socket, res, header_buffer, offset);
+		break;
+	case RES_MODE_FILE:
+		send_file_response(client_socket, res, header_buffer, offset);
+		break;
 	}
 }
 
-void http_send_error(
+void http_send_status(
     const int client_socket, const int status_code, const char *const status_msg,
     const char *const body
 )
@@ -288,8 +297,9 @@ void http_send_error(
 	    .status_code = status_code,
 	    .status_message = status_msg,
 	    .content_type = "text/plain",
-	    .body = body,
-	    .body_len = strlen(body)
+	    .mode = RES_MODE_MEMORY,
+	    .body_len = strlen(body),
+	    .body = body
 	};
 	http_send_response(client_socket, &res);
 }
@@ -316,7 +326,7 @@ static void serve_static_file(const int client_socket, const http_request_t *con
 
 	if (stat(target_file, &st_file) == -1)
 	{
-		http_send_error(
+		http_send_status(
 		    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Página não encontrada."
 		);
 		return;
@@ -326,6 +336,7 @@ static void serve_static_file(const int client_socket, const http_request_t *con
 	    .status_code = HTTP_STATUS_OK,
 	    .status_message = "OK",
 	    .content_type = get_mime_type(target_file),
+	    .mode = RES_MODE_FILE,
 	    .file_path = target_file
 	};
 	http_send_response(client_socket, &res);
@@ -389,6 +400,11 @@ static bool read_http_body(
 		return true;
 	}
 
+	if (req->body_len > MAX_PAYLOAD_SIZE)
+	{
+		return false;
+	}
+
 	req->body = (char *)malloc(req->body_len + 1);
 	if (!req->body)
 	{
@@ -424,9 +440,17 @@ static void route_request(const int client_socket, http_request_t *const req)
 		return;
 	}
 
+	if (strlen(req->path) > MAX_SAFE_URI_LEN)
+	{
+		http_send_status(
+		    client_socket, HTTP_STATUS_URI_TOO_LONG, "URI Too Long", "Caminho longo demais."
+		);
+		return;
+	}
+
 	if (strstr(req->path, ".."))
 	{
-		http_send_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso Negado.");
+		http_send_status(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso Negado.");
 		return;
 	}
 
@@ -441,7 +465,7 @@ static void route_request(const int client_socket, http_request_t *const req)
 		return;
 	}
 
-	http_send_error(
+	http_send_status(
 	    client_socket, HTTP_STATUS_NOT_ALLOWED, "Method Not Allowed", "Método não suportado."
 	);
 }
@@ -494,6 +518,7 @@ void http_handle_client(const int client_socket)
 			if (req.body)
 			{
 				free(req.body);
+				req.body = nullptr;
 			}
 			break;
 		}
@@ -504,6 +529,7 @@ void http_handle_client(const int client_socket)
 		if (req.body)
 		{
 			free(req.body);
+			req.body = nullptr;
 		}
 	}
 }

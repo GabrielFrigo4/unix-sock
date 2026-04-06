@@ -1,5 +1,5 @@
 const UI = {
-    playerName: () => document.getElementById('playerName').value.trim(),
+    playerName: () => document.getElementById('playerName').value.trim().substring(0, 32),
     roomList: document.getElementById('roomList')
 };
 
@@ -32,17 +32,10 @@ window.criarSala = async () => {
 
     const roomId = generateRoomId();
     const roomFile = `sala_${roomId}.json`;
-    const initialState = {
-        board: Array(9).fill(""),
-        turn: "X",
-        players: { X: player, O: null },
-        winner: null
-    };
 
     await fetch(`/api/data/${roomFile}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(initialState)
+        body: player
     });
 
     sessionStorage.setItem('sala', roomFile);
@@ -58,8 +51,8 @@ window.joinRoom = async (roomFile) => {
     const res = await fetch(`/api/data/${roomFile}`);
     const gameState = await res.json();
 
-    const symbol = player === gameState.players.X ? 'X' : 
-                   (player === gameState.players.O || !gameState.players.O) ? 'O' : null;
+    const symbol = player === gameState.players.X ? 'X' :
+        (player === gameState.players.O || !gameState.players.O) ? 'O' : null;
 
     if (!symbol) return alert("Sala cheia!");
 
