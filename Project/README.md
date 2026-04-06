@@ -173,11 +173,10 @@ graph TD
 ---
 
 ## 🛠️ **Configuração do Ambiente (Setup Environment)**
-
-Para garantir a reprodutibilidade da compilação, o suporte rigoroso ao padrão **C23** e a estabilidade do servidor, as instruções abaixo configuram o ecossistema de desenvolvimento do zero. Você pode optar por configurar a toolchain via Homebrew ou via APT (recomendado para Ubuntu/Debian).
+ Para garantir a reprodutibilidade da compilação, o suporte rigoroso ao padrão **C23** e a estabilidade do servidor, as instruções abaixo configuram o ecossistema de desenvolvimento do zero. Você pode optar por configurar a toolchain via Homebrew ou via APT (recomendado para Ubuntu/Debian).
 
 ### 🧰 **Setup Utils**
-Instalação das ferramentas de rede e transferência essenciais. O `netcat` é fundamental para testes locais de *raw sockets* e depuração manual do protocolo HTTP, enquanto `curl` e `wget` são necessários para os scripts de automação subsequentes.
+ Instalação das ferramentas de rede e transferência essenciais. O `netcat` é fundamental para testes locais de *raw sockets* e depuração manual do protocolo HTTP, enquanto `curl` e `wget` são necessários para os scripts de automação subsequentes.
  ```bash
  sudo apt install --yes netcat-openbsd
  sudo apt install --yes curl
@@ -185,7 +184,7 @@ Instalação das ferramentas de rede e transferência essenciais. O `netcat` é 
  ```
 
 ### 📂 **Setup Directory**
-Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e o injeta na variável de ambiente `$PATH`. Isso evita a poluição do sistema e garante que as versões customizadas (e mais recentes) dos compiladores tenham prioridade de execução sobre as versões nativas do SO.
+ Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e o injeta na variável de ambiente `$PATH`. Isso evita a poluição do sistema e garante que as versões customizadas (e mais recentes) dos compiladores tenham prioridade de execução sobre as versões nativas do SO.
  ```bash
  mkdir -p "${HOME}/.local/bin"
  cat << 'EOF' | tee -a "${HOME}/.bashrc" > "/dev/null"
@@ -194,7 +193,7 @@ Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e
  ```
 
 ### 🍺 **Setup Brew (Linuxbrew)**
-*(Opcional se utilizar apenas o APT)*. Instalação do gerenciador de pacotes Homebrew. É uma alternativa robusta para obter pacotes na modalidade *bleeding-edge* (as versões mais recentes possíveis), operando no espaço de usuário (User Space) sem comprometer as dependências do sistema operacional.
+ *(Opcional se utilizar apenas o APT)*. Instalação do gerenciador de pacotes Homebrew. É uma alternativa robusta para obter pacotes na modalidade *bleeding-edge* (as versões mais recentes possíveis), operando no espaço de usuário (User Space) sem comprometer as dependências do sistema operacional.
  ```bash
  sudo -v
  NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -204,8 +203,8 @@ Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e
  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
  ```
 
-### 🧱 **Setup GNU Compiler Collection (GCC)** — *Via Homebrew*
-Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*symlinks*) dinâmicos no seu diretório `~/.local/bin`. O script resolve a versão mais atual lançada no repositório FTP da GNU e mapeia rigorosamente todas as ferramentas da suíte (como `g++`, `gcc-ar`, `gcc-nm`) para uso imediato pelo processo de `make`.
+### 🧱🍺 **Setup GNU Compiler Collection (GCC)** — *Via Homebrew*
+ Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*symlinks*) dinâmicos no seu diretório `~/.local/bin`. O script resolve a versão mais atual lançada no repositório FTP da GNU e mapeia rigorosamente todas as ferramentas da suíte (como `g++`, `gcc-ar`, `gcc-nm`) para uso imediato pelo processo de `make`.
  ```bash
  brew install gcc
  brew install binutils
@@ -226,15 +225,38 @@ Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*sym
  	"${GCC_TARGET}-gfortran" "${GCC_TARGET}-gm2"
  )
  for TOOL in "${GCC_TOOLS[@]}"; do
- 	ln -sf "${BREW_BIN}/${TOOL}-${GCC_VER}" "${HOME}/.local/bin/${TOOL}"
+ 	if [ -f "${BREW_BIN}/${TOOL}-${GCC_VER}" ]; then
+ 		ln -sf "${BREW_BIN}/${TOOL}-${GCC_VER}" "${HOME}/.local/bin/${TOOL}"
+ 	fi
  done
 
  ln -sf "${HOME}/.local/bin/gcc" "${HOME}/.local/bin/cc"
  ln -sf "${HOME}/.local/bin/g++" "${HOME}/.local/bin/CC"
  ```
 
-### 🐧 **Setup GNU Compiler Collection (GCC)** — *Via APT*
-*(Alternativa recomendada para estabilidade no Ubuntu)*. Este bloco adiciona o repositório oficial de testes da toolchain (`ubuntu-toolchain-r/test`), garantindo acesso ao suporte do **C23**. O comando `update-alternatives` é orquestrado para forçar o Kernel a adotar esta versão recém-instalada como o padrão absoluto de compilação C/C++ em todo o ambiente.
+### 🐉🍺 **Setup Clang / LLVM Toolchain** — *Via Homebrew*
+ Baixa a suíte completa do LLVM pelo Homebrew. Diferente do GCC, o Homebrew trata o LLVM como *keg-only* (isolado do sistema) para evitar conflitos severos com ferramentas nativas, especialmente no macOS. O script abaixo extrai o prefixo do pacote instalado e projeta apenas os binários essenciais (`clang`, `clangd`, `lld`, etc.) de forma segura no seu diretório `~/.local/bin`, garantindo que o servidor LSP e os formatadores funcionem imediatamente.
+ ```bash
+ brew install llvm
+
+ LLVM_BIN="$(brew --prefix llvm)/bin"
+ LLVM_TOOLS=(
+ 	"clang" "clang++" "clangd" "clang-format" "clang-tidy"
+ 	"lldb" "llvm-config" "llvm-ar" "llvm-nm" "llvm-ranlib"
+ 	"lld" "ld.lld"
+ )
+ for TOOL in "${LLVM_TOOLS[@]}"; do
+ 	if [ -f "${LLVM_BIN}/${TOOL}" ]; then
+ 		ln -sf "${LLVM_BIN}/${TOOL}" "${HOME}/.local/bin/${TOOL}"
+ 	fi
+ done
+
+ ln -sf "${HOME}/.local/bin/clang" "${HOME}/.local/bin/cc"
+ ln -sf "${HOME}/.local/bin/clang++" "${HOME}/.local/bin/CC"
+ ```
+
+### 🧱🐧 **Setup GNU Compiler Collection (GCC)** — *Via APT*
+ *(Alternativa recomendada para estabilidade no Ubuntu)*. Este bloco adiciona o repositório oficial de testes da toolchain (`ubuntu-toolchain-r/test`), garantindo acesso ao suporte do **C23**. O comando `update-alternatives` é orquestrado para forçar o Kernel a adotar esta versão recém-instalada como o padrão absoluto de compilação C/C++ em todo o ambiente.
  ```bash
  sudo add-apt-repository --yes "ppa:ubuntu-toolchain-r/test"
  sudo apt update
@@ -253,12 +275,14 @@ Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*sym
  	--slave "/usr/bin/gcc-ranlib" gcc-ranlib "/usr/bin/gcc-ranlib-$GCC_VER"
  ```
 
-### 🐉 **Setup Clang / LLVM Toolchain**
-Instalação da arquitetura de compiladores LLVM/Clang. Fortemente recomendada devido às suas excelentes ferramentas de *linting*, *Language Server Protocol* (`clangd`) e sanitização de memória. O script utiliza o instalador dinâmico oficial (`llvm.sh`), extrai a versão estável mais atual da API do GitHub, normaliza as chaves do repositório APT e registra o ecossistema completo no sistema de alternativas.
+### 🐉🐧 **Setup Clang / LLVM Toolchain** — *Via APT*
+ *(Alternativa recomendada para estabilidade no Ubuntu)*. Instalação da arquitetura de compiladores LLVM/Clang. Fortemente recomendada devido às suas excelentes ferramentas de *linting*, *Language Server Protocol* (`clangd`) e sanitização de memória. O script utiliza o instalador dinâmico oficial (`llvm.sh`), extrai a versão estável mais atual da API do GitHub, normaliza as chaves do repositório APT e registra o ecossistema completo no sistema de alternativas.
  ```bash
  sudo apt update
  sudo apt install --yes clang
  sudo apt install --yes libclang-dev
+ sudo apt install --yes clangd
+ sudo apt install --yes lldb
 
  CLANG_VER="$(curl -s "https://api.github.com/repos/llvm/llvm-project/releases/latest" | grep "tag_name" | cut -d '"' -f 4 | sed 's/llvmorg-//' | cut -d. -f1)"
  wget -qO- "https://apt.llvm.org/llvm.sh" | sudo bash -s -- "$CLANG_VER" all
