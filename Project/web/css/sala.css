@@ -121,3 +121,22 @@ body {
 .btn-voltar:hover {
     background: #dc2626;
 }
+
+.timer {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    font-family: monospace;
+    font-size: 1.4em;
+}
+
+.timer.urgente {
+    border-color: #ef4444;
+    color: #ef4444;
+    animation: piscar 1s infinite;
+}
+
+@keyframes piscar {
+    50% {
+        opacity: 0.5;
+    }
+}

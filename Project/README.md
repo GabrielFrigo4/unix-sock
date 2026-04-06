@@ -1,5 +1,13 @@
 # 💻 **Implementação: Servidor HTTP/1.1 RESTful em C (POSIX / FreeBSD & Linux)**
 
+## TO-DO List
+ [ ] - Arrumar o Timer e a exclusão de Salas
+ [ ] - Fazer o `api.c` ser específico do Jogo da Velha, o que vai deixar mais rígido e seguro o servidor
+ [ ] - Verificar o quão seguro estão os endpoints do servidor
+ [ ] - Colocar HTTPS com TLS para deixar realmente seguro
+ [ ] - Colocar em um Servidor da Oracle
+ [ ] - Colocar um Domínio `Registro.br`
+
 ## 🎯 **Arquitetura e Objetivo Técnico (Versão 1)**
  Implementação de um servidor web e API REST de alta fidelidade em **C puro (C23)**, operando diretamente sobre a API de **Berkeley Sockets** com foco estrito em **portabilidade UNIX (POSIX)**. O projeto adota um paradigma de **Imutabilidade Funcional** e **Defesa de Memória**, garantindo que o fluxo de dados seja previsível e livre de efeitos colaterais em ambientes **FreeBSD** e **Linux** através do uso rigoroso de qualificadores `const` e `constexpr` em toda a base lógica.
 
@@ -86,6 +94,15 @@ graph TD
  ```
 
  > ⚙️ **Nota de Design:** Ao delegar o contexto ao `sessionStorage`, eliminamos colisões de dados no servidor e garantimos a idempotência das operações via API REST, mantendo o servidor 100% livre de estado volátil.
+
+### 🛡️ **Proteção Estrutural e Lazy Cleanup (Garbage Collection)**
+ Para blindar o servidor contra ataques de exaustão de recursos (DoS) e garantir a perenidade do sistema de arquivos sem a necessidade de *daemons* em background, o projeto implementa uma gestão autônoma e inteligente do ciclo de vida dos dados:
+
+ * **Limites de Payload (OOM Protection):** O processador de rede impõe um teto global de 4MB por requisição (`MAX_PAYLOAD_SIZE`). Em nível de domínio, a escrita de estados de salas sofre um *hard cap* estrito de 512 bytes. Requisições maliciosas são ejetadas sumariamente com o status `413 Payload Too Large`.
+ * **Lotação Fixa:** O ecossistema restringe o ambiente a um limite máximo de 5 salas ativas simultaneamente, barrando criações abusivas (`429 Too Many Requests`).
+ * **Expurgo Passivo (Lazy Cleanup):** O servidor atua como seu próprio *Garbage Collector*. Aproveitando a varredura natural do diretório (I/O), o motor em C identifica e destrói silenciosamente salas que ultrapassam 4 minutos de inatividade térmica (`st_mtime`), ou aplica um *grace period* atômico de 10 segundos ao detectar o fim matemático de uma partida, permitindo a sincronização final dos clientes antes da obliteração do arquivo.
+
+ > ⚙️ **Nota de Segurança:** A arquitetura de *Lazy Cleanup* acoplada às requisições REST garante que a faxina de disco custe **zero ciclos ociosos de CPU**. O servidor limpa o "lixo" apenas durante o trajeto de operações inevitáveis de leitura/escrita, dispensando o uso de *threads* ou timers bloqueantes.
 
 ## 🔨 **Compilação e Engenharia de Build**
  A construção do binário é orquestrada via **Makefile**, exigindo estritamente a suíte **GCC** (ou Clang) com suporte nativo ao padrão **ISO C23**. Para garantir a integridade da arquitetura imutável e a ausência de efeitos colaterais, o processo de compilação impõe um regime de **Zero Warnings** através de flags de diagnóstico rigorosas:

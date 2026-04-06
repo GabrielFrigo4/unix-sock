@@ -13,7 +13,9 @@ const UI = {
     playerLabel: document.getElementById('lblJogador'),
     symbolLabel: document.getElementById('lblSimbolo'),
     statusBanner: document.getElementById('statusTurno'),
-    cells: document.querySelectorAll('.cell')
+    cells: document.querySelectorAll('.cell'),
+    tempoBanner: document.getElementById('statusTempo'),
+    tempoLabel: document.getElementById('lblTempo')
 };
 
 UI.roomLabel.textContent = Config.roomFile.replace('sala_', '').replace('.json', '');
@@ -66,13 +68,47 @@ const updateInterface = () => {
     UI.statusBanner.className = `status-banner ${isMyTurn ? 'vez-ativa' : 'vez-espera'}`;
 };
 
+const atualizarCronometro = () => {
+    if (!State.gameData) return;
+
+    if (State.gameData.winner) {
+        UI.tempoBanner.style.display = 'none';
+        return;
+    }
+
+    const agora = Date.now();
+    const tempoDecorrido = Math.floor((agora - State.gameData.createdAt) / 1000);
+    const tempoRestante = 240 - tempoDecorrido;
+
+    if (tempoRestante <= 0) {
+        UI.tempoLabel.textContent = "00:00";
+        return;
+    }
+
+    const min = String(Math.floor(tempoRestante / 60)).padStart(2, '0');
+    const sec = String(tempoRestante % 60).padStart(2, '0');
+    UI.tempoLabel.textContent = `${min}:${sec}`;
+
+    if (tempoRestante <= 60) {
+        UI.tempoBanner.classList.add("urgente");
+    }
+};
+
 const fetchServerState = async () => {
     if (State.isUpdating || (State.gameData?.winner)) return;
 
     try {
         const res = await fetch(`/api/data/${Config.roomFile}`);
-        const data = await res.json();
 
+        if (res.status === 404) {
+            if (!State.gameData?.winner) {
+                alert("⏰ Tempo Esgotado! A sala foi encerrada pelo servidor.");
+                window.location.href = "/";
+            }
+            return;
+        }
+
+        const data = await res.json();
         if (State.isUpdating) return;
         State.gameData = data;
 
@@ -80,7 +116,9 @@ const fetchServerState = async () => {
             State.gameData.players.O = Config.playerName;
             await syncWithServer();
         }
+
         updateInterface();
+        atualizarCronometro();
     } catch (e) {
         console.error("Erro ao buscar estado:", e);
     }
@@ -122,5 +160,6 @@ window.voltarParaLobby = () => {
     window.location.href = "/";
 };
 
+setInterval(atualizarCronometro, 1000);
 setInterval(fetchServerState, 512);
 fetchServerState();
