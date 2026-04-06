@@ -4,6 +4,7 @@
  [ ] - Arrumar o Timer e a exclusão de Salas
  [ ] - Fazer o `api.c` ser específico do Jogo da Velha, o que vai deixar mais rígido e seguro o servidor
  [ ] - Verificar o quão seguro estão os endpoints do servidor
+ [ ] - Criar um WebHook / WebSocket para uma melhor sincronia
  [ ] - Colocar HTTPS com TLS para deixar realmente seguro
  [ ] - Colocar em um Servidor da Oracle
  [ ] - Colocar um Domínio `Registro.br`
