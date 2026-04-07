@@ -1,20 +1,21 @@
 # 💻 **Implementação: Servidor HTTP/1.1 RESTful em C (POSIX / FreeBSD & Linux)**
 
 ## TO-DO List Versão 1
- [ ] - Corrigir sincronia do Timer e expulsão de salas
- [ ] - Acoplar regras do jogo no `api.c` (Backend Autoritário)
- [ ] - Blindar endpoints e auditar acessos à API
- [ ] - Configurar certificado TLS/HTTPS
- [ ] - Fazer o Deploy na Oracle Cloud
- [ ] - Configurar domínio customizado (Registro.br)
+ - [ ] Refatorar levemente o código C
+ - [ ] Corrigir sincronia do Timer e expulsão de salas
+ - [ ] Acoplar regras do jogo no `api.c` (Backend Autoritário)
+ - [ ] Blindar endpoints e auditar acessos à API
+ - [ ] Configurar certificado TLS/HTTPS
+ - [ ] Fazer o Deploy na Oracle Cloud
+ - [ ] Configurar domínio customizado (Registro.br)
 
 ## TO-DO List Versão 2 (Arquitetura Assíncrona)
- [ ] - Substituir `fork()` por Sockets Não-Bloqueantes (`fcntl`)
- [ ] - Implementar Event Loop em O(1) (`epoll`/`kqueue`)
- [ ] - Criar Máquina de Estados para leitura/escrita simultânea
- [ ] - Implementar Server-Sent Events (SSE) para tempo real
- [ ] - Adicionar Thread Pool para processar JSON/Lógica do jogo
- [ ] - Otimizar entrega de estáticos com Zero-Copy (`sendfile()`)
+ - [ ] Substituir `fork()` por Sockets Não-Bloqueantes (`fcntl`)
+ - [ ] Implementar Event Loop em O(1) (`epoll`/`kqueue`)
+ - [ ] Criar Máquina de Estados para leitura/escrita simultânea
+ - [ ] Implementar Server-Sent Events (SSE) para tempo real
+ - [ ] Adicionar Thread Pool para processar JSON/Lógica do jogo
+ - [ ] Otimizar entrega de estáticos com Zero-Copy (`sendfile()`)
 
 ## 🎯 **Arquitetura e Objetivo Técnico (Versão 1)**
  Implementação de um servidor web e API REST de alta fidelidade em **C puro (C23)**, operando diretamente sobre a API de **Berkeley Sockets** com foco estrito em **portabilidade UNIX (POSIX)**. O projeto adota um paradigma de **Imutabilidade Funcional** e **Defesa de Memória**, garantindo que o fluxo de dados seja previsível e livre de efeitos colaterais em ambientes **FreeBSD** e **Linux** através do uso rigoroso de qualificadores `const` e `constexpr` em toda a base lógica.
