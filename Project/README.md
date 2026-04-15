@@ -263,7 +263,7 @@ graph TD
  sudo apt update
  sudo apt install --yes build-essential
 
- GCC_VER="$(curl -s https://ftp.gnu.org/gnu/gcc/ | grep -o 'href="gcc-[0-9]*' | cut -d- -f2 | sort -n | tail -1)"
+ GCC_VER="$(curl -sL https://ftp.gnu.org/gnu/gcc/ | grep -o 'href="gcc-[0-9]*' | cut -d- -f2 | sort -n | tail -1)"
  sudo apt install --yes "gcc-$GCC_VER"
  sudo apt install --yes "g++-$GCC_VER"
  sudo update-alternatives --install "/usr/bin/gcc" gcc "/usr/bin/gcc-$GCC_VER" 100 \
@@ -285,7 +285,7 @@ graph TD
  sudo apt install --yes clangd
  sudo apt install --yes lldb
 
- CLANG_VER="$(curl -s "https://api.github.com/repos/llvm/llvm-project/releases/latest" | grep "tag_name" | cut -d '"' -f 4 | sed 's/llvmorg-//' | cut -d. -f1)"
+ CLANG_VER="$(curl -sL "https://api.github.com/repos/llvm/llvm-project/releases/latest" | grep "tag_name" | cut -d '"' -f 4 | sed 's/llvmorg-//' | cut -d. -f1)"
  wget -qO- "https://apt.llvm.org/llvm.sh" | sudo bash -s -- "$CLANG_VER" all
  sudo grep -l "apt.llvm.org" /etc/apt/sources.list.d/*.list | \
  	xargs sudo sed -i 's/deb http/deb [arch=amd64] http/g'
