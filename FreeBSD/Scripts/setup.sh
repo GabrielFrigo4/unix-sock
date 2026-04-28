@@ -586,6 +586,13 @@ sudo pkg install --yes fontconfig
 mkdir -p "${HOME}/.local/share/fonts"
 
 ### ################################
+### Microsoft System Fonts
+### ################################
+
+sudo pkg install --yes webfonts
+sudo pkg install --yes carlito-ttf
+
+### ################################
 ### RobotoMono Nerd Fonts
 ### ################################
 
