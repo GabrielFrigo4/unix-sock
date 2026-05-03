@@ -13,7 +13,7 @@ curl -o "FreeBSD.iso.xz" "$FREEBSD_URL/$FREEBSD_VER/$ISO_NAME"
 
 # Verify Checksum
 curl -sL "$FREEBSD_URL/$FREEBSD_VER/CHECKSUM.SHA256-FreeBSD-$FREEBSD_VER-RELEASE-amd64" | \
-    grep "$ISO_NAME" | awk '{print $4 "  FreeBSD.iso.xz"}' | sha256sum -c -
+    grep "$ISO_NAME" | awk '{print ${4} "  FreeBSD.iso.xz"}' | sha256sum -c -
 
 # Extract FreeBSD
 unxz -f "FreeBSD.iso.xz"

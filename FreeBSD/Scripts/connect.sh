@@ -13,4 +13,4 @@ virt-viewer --connect "qemu:///system" FreeBSD-15.0
 virsh --connect "qemu:///system" net-dhcp-leases default
 
 # Open SSH
-ssh "gabriel@$(virsh --connect "qemu:///system" net-dhcp-leases default | grep "vmbsd" | awk '{print $5}' | cut -d'/' -f1)"
+ssh "gabriel@$(virsh --connect "qemu:///system" net-dhcp-leases default | grep "vmbsd" | awk '{print ${5}}' | cut -d'/' -f1)"

@@ -101,10 +101,10 @@ gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "search"        
 
 # CREATE LAUNCHER FUNCTION
 create_launcher() {
-	local INDEX="$1"
-	local NAME="$2"
-	local COMMAND="$3"
-	local BINDING="$4"
+	local INDEX="${1}"
+	local NAME="${2}"
+	local COMMAND="${3}"
+	local BINDING="${4}"
 	local KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom${INDEX}/"
 
 	gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH" "name" "$NAME"
@@ -224,10 +224,29 @@ rm "${SHELL_BLOCK}"
 # Config Shell
 cat << 'EOF' | tee -a "${HOME}/.shrc" | sudo tee -a "/root/.shrc" > "/dev/null"
 ### ################################
-### SHELL ENVIRONMENT
+### SHELL INITIALIZATION
 ### ################################
 
 export SHELL_INIT=1
+
+### ################################
+### SHELL ENVIRONMENT
+### ################################
+
+path_front() {
+	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
+		export PATH="${1}:${PATH}"
+	fi
+}
+
+path_back() {
+	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
+		export PATH="${PATH}:${1}"
+	fi
+}
+
+path_front "${HOME}/.local/bin"
+export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$0]++' | sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
@@ -275,7 +294,7 @@ alias :="update_prompt; command :"
 update_prompt
 
 run_and_update() {
-	local cmd="$1"
+	local cmd="${1}"
 	shift
 	command "$cmd" "$@"
 	local ret=$?
@@ -357,10 +376,29 @@ sudo pkg install --yes bash
 # Config Bash
 cat << 'EOF' | tee -a "${HOME}/.bashrc" | sudo tee -a "/root/.bashrc" > "/dev/null"
 ### ################################
-### SHELL ENVIRONMENT
+### SHELL INITIALIZATION
 ### ################################
 
 export SHELL_INIT=1
+
+### ################################
+### SHELL ENVIRONMENT
+### ################################
+
+path_front() {
+	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
+		export PATH="${1}:${PATH}"
+	fi
+}
+
+path_back() {
+	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
+		export PATH="${PATH}:${1}"
+	fi
+}
+
+path_front "${HOME}/.local/bin"
+export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$0]++' | sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
@@ -448,6 +486,12 @@ curl -fsSL "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/insta
 # Config Zsh
 cat << 'EOF' | tee -a "${HOME}/.zshrc" | sudo tee -a "/root/.zshrc" > "/dev/null"
 ### ################################
+### SHELL INITIALIZATION
+### ################################
+
+export SHELL_INIT=1
+
+### ################################
 ### SHELL OPTIONS SETUP
 ### ################################
 
@@ -485,7 +529,20 @@ setopt COMPLETE_IN_WORD
 ### SHELL ENVIRONMENT
 ### ################################
 
-export SHELL_INIT=1
+path_front() {
+	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
+		export PATH="${1}:${PATH}"
+	fi
+}
+
+path_back() {
+	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
+		export PATH="${PATH}:${1}"
+	fi
+}
+
+path_front "${HOME}/.local/bin"
+export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$0]++' | sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
