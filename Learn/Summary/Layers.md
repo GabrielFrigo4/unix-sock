@@ -8,13 +8,13 @@ Abaixo, apresento um material extremamente detalhado sobre cada uma dessas camad
 
 A Camada de Aplicação é o ponto de contato direto com os softwares e processos que utilizamos diariamente. Ela não se trata do aplicativo em si (como o Google Chrome ou o Outlook), mas sim dos protocolos que esses aplicativos utilizam para se comunicar pela rede. É nesta camada que residem os protocolos de alto nível, como HTTP (para navegação web), SMTP (para envio de e-mails), FTP (para transferência de arquivos) e DNS (para resolução de nomes de domínio).
 
-A principal peculiaridade da Camada de Aplicação é que ela opera no "espaço do usuário" (user space) dentro do sistema operacional, delegando toda a complexidade de roteamento e garantia de entrega para as camadas inferiores. A comunicação aqui é puramente lógica entre processos: o processo cliente em uma máquina "conversa" com o processo servidor em outra, trocando mensagens de aplicação. Esses dados formam o que chamamos de *Payload* ou "Mensagem", que será o núcleo da informação a ser transportada.
+A principal peculiaridade da Camada de Aplicação é que ela opera no "espaço do usuário" (user space) dentro do sistema operacional, delegando toda a complexidade de roteamento e garantia de entrega para as camadas inferiores. A comunicação aqui é puramente lógica entre processos: o processo cliente em uma máquina "conversa" com o processo servidor em outra, trocando mensagens de aplicação. Esses dados formam o que chamamos de _Payload_ ou "Mensagem", que será o núcleo da informação a ser transportada.
 
 Outro detalhe vital é a dependência de portas lógicas providas pela camada subjacente. Um servidor web, por exemplo, fica escutando a porta 80 (HTTP) ou 443 (HTTPS). A Camada de Aplicação define não apenas a sintaxe da mensagem (como os cabeçalhos em texto puro do HTTP/1.1), mas também a semântica (o que significa um código de status 404 ou 200) e as regras de temporalidade (quando um cliente pode enviar uma requisição e como o servidor deve responder).
 
 ### 2. Camada de Transporte (Transport Layer)
 
-Descendo um degrau, a Camada de Transporte é responsável pela comunicação lógica "fim a fim" (end-to-end) entre os processos de aplicação rodando em hosts diferentes. Enquanto a camada de rede leva o pacote de uma máquina até a outra, a Camada de Transporte garante que a informação chegue ao *processo correto* dentro dessa máquina, através de um mecanismo chamado multiplexação e demultiplexação (usando portas de origem e destino).
+Descendo um degrau, a Camada de Transporte é responsável pela comunicação lógica "fim a fim" (end-to-end) entre os processos de aplicação rodando em hosts diferentes. Enquanto a camada de rede leva o pacote de uma máquina até a outra, a Camada de Transporte garante que a informação chegue ao _processo correto_ dentro dessa máquina, através de um mecanismo chamado multiplexação e demultiplexação (usando portas de origem e destino).
 
 As duas grandes estrelas desta camada são o **TCP (Transmission Control Protocol)** e o **UDP (User Datagram Protocol)**. O TCP é um protocolo orientado a conexão, o que significa que ele estabelece uma via de mão dupla (Three-way Handshake) antes de enviar qualquer dado. Suas peculiaridades incluem a entrega confiável: ele divide a mensagem da aplicação em "Segmentos", numera cada um deles, exige confirmação de recebimento (ACKs) e retransmite segmentos perdidos. Além disso, o TCP implementa controle de fluxo (evitando que o remetente sobrecarregue o destinatário) e controle de congestionamento (evitando que o tráfego colapse os roteadores da rede).
 
@@ -30,7 +30,7 @@ A partir daí, entram em ação os algoritmos de roteamento (como OSPF, BGP). Ca
 
 ### 4. Camada de Enlace (Data Link Layer)
 
-Enquanto a Camada de Rede cuida da viagem global ponta-a-ponta, a Camada de Enlace cuida exclusivamente da transferência do pacote de um nó (host ou roteador) para o *próximo nó adjacente* através de um link físico específico. Protocolos comuns aqui incluem Ethernet (para redes cabeadas) e IEEE 802.11 (Wi-Fi).
+Enquanto a Camada de Rede cuida da viagem global ponta-a-ponta, a Camada de Enlace cuida exclusivamente da transferência do pacote de um nó (host ou roteador) para o _próximo nó adjacente_ através de um link físico específico. Protocolos comuns aqui incluem Ethernet (para redes cabeadas) e IEEE 802.11 (Wi-Fi).
 
 A peculiaridade desta camada é o endereçamento físico, conhecido como endereço MAC (Media Access Control). Ao contrário do endereço IP, que é lógico e pode mudar dependendo de onde você se conecta, o endereço MAC é fixo e gravado na placa de rede do dispositivo. A Camada de Enlace encapsula o datagrama IP dentro de uma estrutura chamada "Quadro" (Frame). Esse quadro contém o MAC de origem e o MAC de destino (do próximo salto, não necessariamente do destino final).
 
@@ -50,21 +50,21 @@ Para ilustrar de forma definitiva o funcionamento interconectado, vamos traçar 
 
 **1. A Geração e o Encapsulamento no Cliente:**
 
-* **Aplicação:** Você digita um site no navegador. O navegador cria uma mensagem HTTP GET (ex: `GET /index.html HTTP/1.1`). Essa mensagem de texto puro é passada para a Camada de Transporte.
-* **Transporte (TCP):** O sistema operacional recebe os dados HTTP. Ele pega essa mensagem, adiciona um cabeçalho TCP contendo a Porta de Origem (uma porta aleatória alta, ex: 54321) e a Porta de Destino (porta 80 para HTTP). Ele também adiciona números de Sequência e de *Acknowledgment* para garantir que o servidor saberá a ordem correta dos dados. A mensagem HTTP agora está "escondida" dentro do *Segmento TCP*.
-* **Rede (IP):** O Segmento TCP é passado para a Camada de Rede. Aqui, adiciona-se o cabeçalho IP. O IP de Origem é o do seu computador; o IP de Destino é o do servidor web (previamente descoberto via DNS). O Segmento TCP agora se tornou o "payload" de um *Datagrama IP*.
-* **Enlace (Ethernet/Wi-Fi):** Para que seu computador consiga tirar esse datagrama da sua casa, ele precisa enviá-lo para o roteador local (Default Gateway). A Camada de Enlace cria um *Quadro*. Ela usa o protocolo ARP para descobrir o endereço MAC do seu roteador local. O cabeçalho do Quadro recebe o MAC de Origem (seu PC) e o MAC de Destino (seu roteador local). O Datagrama IP inteiro é encapsulado neste Quadro. No final do quadro, adiciona-se um trailer de verificação de erro (FCS).
+- **Aplicação:** Você digita um site no navegador. O navegador cria uma mensagem HTTP GET (ex: `GET /index.html HTTP/1.1`). Essa mensagem de texto puro é passada para a Camada de Transporte.
+- **Transporte (TCP):** O sistema operacional recebe os dados HTTP. Ele pega essa mensagem, adiciona um cabeçalho TCP contendo a Porta de Origem (uma porta aleatória alta, ex: 54321) e a Porta de Destino (porta 80 para HTTP). Ele também adiciona números de Sequência e de _Acknowledgment_ para garantir que o servidor saberá a ordem correta dos dados. A mensagem HTTP agora está "escondida" dentro do _Segmento TCP_.
+- **Rede (IP):** O Segmento TCP é passado para a Camada de Rede. Aqui, adiciona-se o cabeçalho IP. O IP de Origem é o do seu computador; o IP de Destino é o do servidor web (previamente descoberto via DNS). O Segmento TCP agora se tornou o "payload" de um _Datagrama IP_.
+- **Enlace (Ethernet/Wi-Fi):** Para que seu computador consiga tirar esse datagrama da sua casa, ele precisa enviá-lo para o roteador local (Default Gateway). A Camada de Enlace cria um _Quadro_. Ela usa o protocolo ARP para descobrir o endereço MAC do seu roteador local. O cabeçalho do Quadro recebe o MAC de Origem (seu PC) e o MAC de Destino (seu roteador local). O Datagrama IP inteiro é encapsulado neste Quadro. No final do quadro, adiciona-se um trailer de verificação de erro (FCS).
 
 **2. A Travessia na Rede (O papel dos Roteadores):**
 
-* Quando o sinal elétrico chega ao seu roteador local, a placa de rede do roteador recebe os bits e reconstrói o Quadro de Enlace.
-* Ele analisa o MAC de destino e vê que é para ele. Então, ele "abre" o quadro (desencapsula a Camada de Enlace), extraindo o Datagrama IP.
-* A Camada de Rede do roteador olha para o IP de Destino final. Ele consulta sua tabela de roteamento e decide para qual próximo roteador (próximo salto/hop) deve enviar.
-* O roteador então cria um *novo* Quadro de Enlace, com seu próprio MAC como origem, e o MAC do próximo roteador como destino. Note que o IP de Origem e Destino nunca mudam, mas os endereços MAC de Origem e Destino mudam a cada salto (hop) entre roteadores.
+- Quando o sinal elétrico chega ao seu roteador local, a placa de rede do roteador recebe os bits e reconstrói o Quadro de Enlace.
+- Ele analisa o MAC de destino e vê que é para ele. Então, ele "abre" o quadro (desencapsula a Camada de Enlace), extraindo o Datagrama IP.
+- A Camada de Rede do roteador olha para o IP de Destino final. Ele consulta sua tabela de roteamento e decide para qual próximo roteador (próximo salto/hop) deve enviar.
+- O roteador então cria um _novo_ Quadro de Enlace, com seu próprio MAC como origem, e o MAC do próximo roteador como destino. Note que o IP de Origem e Destino nunca mudam, mas os endereços MAC de Origem e Destino mudam a cada salto (hop) entre roteadores.
 
 **3. O Desencapsulamento no Servidor Destino:**
 
-* **Enlace:** O pacote finalmente chega ao servidor web. A placa de rede recebe os bits, monta o quadro, verifica que o MAC de destino é o do servidor, confere os erros (FCS) e extrai o Datagrama IP, subindo-o para a camada de rede.
-* **Rede:** O sistema operacional do servidor verifica o IP de Destino e confirma: "Sim, este pacote é para mim". Ele retira o cabeçalho IP e passa o "recheio" (o Segmento TCP) para a Camada de Transporte.
-* **Transporte:** O protocolo TCP no servidor lê a Porta de Destino (80). Ele percebe que os dados são para o software de servidor web (como Apache ou Nginx) que está escutando ativamente nessa porta. O TCP acusa o recebimento (enviando um pacote ACK de volta ao cliente), arranca o cabeçalho TCP, junta os fragmentos se estiverem divididos e entrega os dados em ordem perfeita.
-* **Aplicação:** O software do servidor web recebe a exata mensagem HTTP original (`GET /index.html HTTP/1.1`). Ele a interpreta, busca a página HTML no disco rígido do servidor e inicia todo o processo inverso para enviar a resposta ao cliente.
+- **Enlace:** O pacote finalmente chega ao servidor web. A placa de rede recebe os bits, monta o quadro, verifica que o MAC de destino é o do servidor, confere os erros (FCS) e extrai o Datagrama IP, subindo-o para a camada de rede.
+- **Rede:** O sistema operacional do servidor verifica o IP de Destino e confirma: "Sim, este pacote é para mim". Ele retira o cabeçalho IP e passa o "recheio" (o Segmento TCP) para a Camada de Transporte.
+- **Transporte:** O protocolo TCP no servidor lê a Porta de Destino (80). Ele percebe que os dados são para o software de servidor web (como Apache ou Nginx) que está escutando ativamente nessa porta. O TCP acusa o recebimento (enviando um pacote ACK de volta ao cliente), arranca o cabeçalho TCP, junta os fragmentos se estiverem divididos e entrega os dados em ordem perfeita.
+- **Aplicação:** O software do servidor web recebe a exata mensagem HTTP original (`GET /index.html HTTP/1.1`). Ele a interpreta, busca a página HTML no disco rígido do servidor e inicia todo o processo inverso para enviar a resposta ao cliente.

@@ -1,41 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
-
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Gerenciador de Arquivos C</title>
-    <link rel="icon" type="imagem/png" href="img/editor.png">
-    <link rel="stylesheet" href="css/editor.css">
-</head>
+    <link rel="icon" type="imagem/png" href="img/editor.png" />
+    <link rel="stylesheet" href="css/editor.css" />
+  </head>
 
-<body>
+  <body>
     <div class="app-layout">
-        <aside class="sidebar">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <img src="img/editor.png" alt="Ícone Editor" style="width: 30px; height: 30px;">
-                <h3 style="margin: 0;">Arquivos em ./data/</h3>
-            </div>
-            <ul id="fileList">
-                <li>Carregando...</li>
-            </ul>
-            <div class="new-file-box">
-                <input type="text" id="newFileName" placeholder="novo.txt">
-                <button id="btnNovo">Criar</button>
-            </div>
-        </aside>
+      <aside class="sidebar">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+          "
+        >
+          <img
+            src="img/editor.png"
+            alt="Ícone Editor"
+            style="width: 30px; height: 30px"
+          />
+          <h3 style="margin: 0">Arquivos em ./data/</h3>
+        </div>
+        <ul id="fileList">
+          <li>Carregando...</li>
+        </ul>
+        <div class="new-file-box">
+          <input type="text" id="newFileName" placeholder="novo.txt" />
+          <button id="btnNovo">Criar</button>
+        </div>
+      </aside>
 
-        <main class="editor-area">
-            <h2>Editando: <span id="currentFile">Nenhum arquivo selecionado</span></h2>
-            <textarea id="meuEditor" disabled placeholder="Selecione ou crie um arquivo na lateral..."></textarea>
-            <div class="actions">
-                <button id="btnSalvar" disabled>Salvar Arquivo</button>
-                <button id="btnExcluir" disabled class="btn-danger">Excluir Arquivo</button>
-            </div>
-            <div id="statusMensagem" class="status-oculto"></div>
-        </main>
+      <main class="editor-area">
+        <h2>
+          Editando: <span id="currentFile">Nenhum arquivo selecionado</span>
+        </h2>
+        <textarea
+          id="meuEditor"
+          disabled
+          placeholder="Selecione ou crie um arquivo na lateral..."
+        ></textarea>
+        <div class="actions">
+          <button id="btnSalvar" disabled>Salvar Arquivo</button>
+          <button id="btnExcluir" disabled class="btn-danger">
+            Excluir Arquivo
+          </button>
+        </div>
+        <div id="statusMensagem" class="status-oculto"></div>
+      </main>
     </div>
 
     <script src="js/editor.js"></script>
-</body>
-
+  </body>
 </html>

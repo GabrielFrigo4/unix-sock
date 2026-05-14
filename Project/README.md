@@ -1,304 +1,331 @@
 # 💻 **Implementação: Servidor HTTP/1.1 RESTful em C (POSIX / FreeBSD & Linux)**
 
 ## TO-DO List Versão 1
- - [ ] Refatorar levemente o código C
- - [ ] Corrigir sincronia do Timer e expulsão de salas
- - [ ] Acoplar regras do jogo no `api.c` (Backend Autoritário)
- - [ ] Blindar endpoints e auditar acessos à API
- - [ ] Configurar certificado TLS/HTTPS
- - [ ] Fazer o Deploy na Oracle Cloud
- - [ ] Configurar domínio customizado (Registro.br)
+
+- [ ] Refatorar levemente o código C
+- [ ] Corrigir sincronia do Timer e expulsão de salas
+- [ ] Acoplar regras do jogo no `api.c` (Backend Autoritário)
+- [ ] Blindar endpoints e auditar acessos à API
+- [ ] Configurar certificado TLS/HTTPS
+- [ ] Fazer o Deploy na Oracle Cloud
+- [ ] Configurar domínio customizado (Registro.br)
 
 ## TO-DO List Versão 2 (Arquitetura Assíncrona)
- - [ ] Substituir `fork()` por Sockets Não-Bloqueantes (`fcntl`)
- - [ ] Implementar Event Loop em O(1) (`epoll`/`kqueue`)
- - [ ] Criar Máquina de Estados para leitura/escrita simultânea
- - [ ] Implementar Server-Sent Events (SSE) para tempo real
- - [ ] Adicionar Thread Pool para processar JSON/Lógica do jogo
- - [ ] Otimizar entrega de estáticos com Zero-Copy (`sendfile()`)
+
+- [ ] Substituir `fork()` por Sockets Não-Bloqueantes (`fcntl`)
+- [ ] Implementar Event Loop em O(1) (`epoll`/`kqueue`)
+- [ ] Criar Máquina de Estados para leitura/escrita simultânea
+- [ ] Implementar Server-Sent Events (SSE) para tempo real
+- [ ] Adicionar Thread Pool para processar JSON/Lógica do jogo
+- [ ] Otimizar entrega de estáticos com Zero-Copy (`sendfile()`)
 
 ## 🎯 **Arquitetura e Objetivo Técnico (Versão 1)**
- Implementação de um servidor web e API REST de alta fidelidade em **C puro (C23)**, operando diretamente sobre a API de **Berkeley Sockets** com foco estrito em **portabilidade UNIX (POSIX)**. O projeto adota um paradigma de **Imutabilidade Funcional** e **Defesa de Memória**, garantindo que o fluxo de dados seja previsível e livre de efeitos colaterais em ambientes **FreeBSD** e **Linux** através do uso rigoroso de qualificadores `const` e `constexpr` em toda a base lógica.
 
- O objetivo primário é a exploração da pilha TCP/IP e a superação das armadilhas clássicas de I/O, adotando o padrão de *Clean Architecture* e *In-Place Parsing*.
+Implementação de um servidor web e API REST de alta fidelidade em **C puro (C23)**, operando diretamente sobre a API de **Berkeley Sockets** com foco estrito em **portabilidade UNIX (POSIX)**. O projeto adota um paradigma de **Imutabilidade Funcional** e **Defesa de Memória**, garantindo que o fluxo de dados seja previsível e livre de efeitos colaterais em ambientes **FreeBSD** e **Linux** através do uso rigoroso de qualificadores `const` e `constexpr` em toda a base lógica.
 
- > ⚙️ **Nota de Design:** O uso de qualificadores `const` e `constexpr` em nível de API, combinado com o *parsing in-place*, elimina a necessidade de alocações dinâmicas custosas e garante que o servidor seja imune a efeitos colaterais de memória.
+O objetivo primário é a exploração da pilha TCP/IP e a superação das armadilhas clássicas de I/O, adotando o padrão de _Clean Architecture_ e _In-Place Parsing_.
+
+> ⚙️ **Nota de Design:** O uso de qualificadores `const` e `constexpr` em nível de API, combinado com o _parsing in-place_, elimina a necessidade de alocações dinâmicas custosas e garante que o servidor seja imune a efeitos colaterais de memória.
 
 ### ⚙️ **Modelo de Concorrência e Processamento de Rede**
- Para garantir que múltiplas requisições sejam atendidas simultaneamente sem bloqueio de I/O e que o protocolo HTTP seja respeitado rigorosamente, o servidor adota a system call `fork()`, aliada a um sofisticado controle de estado e memória:
 
- * **Isolamento de Falhas (Workers):** Cada conexão é delegada a um processo filho isolado, protegendo o daemon principal.
- * **O "Self-Pipe Trick" e `poll()`:** Para superar a limitação assíncrona dos sinais POSIX, o servidor utiliza um `pipe` local não-bloqueante. Sinais do Kernel são injetados no cano e monitorados de forma síncrona pelo `poll()` junto com os sockets de rede.
- * **Resiliência a `EINTR`:** O loop de eventos captura e trata *Interrupted System Calls*, garantindo estabilidade durante a limpeza de processos zumbis.
- * **Enquadramento (Framing) TCP Seguro:** O parser HTTP implementa uma máquina de estados resiliente para remontagem de payloads fragmentados na rede, baseando-se dinamicamente no cabeçalho `Content-Length`. Isso imuniza o servidor contra a fragmentação natural da Camada de Transporte.
+Para garantir que múltiplas requisições sejam atendidas simultaneamente sem bloqueio de I/O e que o protocolo HTTP seja respeitado rigorosamente, o servidor adota a system call `fork()`, aliada a um sofisticado controle de estado e memória:
 
- > ⚙️ **Nota de Resiliência:** A adoção do modelo *multi-process* via `fork()` garante **isolamento total de memória** entre as requisições. Diferente de um modelo baseado em *threads*, uma falha crítica ou corrupção de memória em um processo *worker* (causada por um payload malformado, por exemplo) é contida e não compromete a execução do daemon principal.
+- **Isolamento de Falhas (Workers):** Cada conexão é delegada a um processo filho isolado, protegendo o daemon principal.
+- **O "Self-Pipe Trick" e `poll()`:** Para superar a limitação assíncrona dos sinais POSIX, o servidor utiliza um `pipe` local não-bloqueante. Sinais do Kernel são injetados no cano e monitorados de forma síncrona pelo `poll()` junto com os sockets de rede.
+- **Resiliência a `EINTR`:** O loop de eventos captura e trata _Interrupted System Calls_, garantindo estabilidade durante a limpeza de processos zumbis.
+- **Enquadramento (Framing) TCP Seguro:** O parser HTTP implementa uma máquina de estados resiliente para remontagem de payloads fragmentados na rede, baseando-se dinamicamente no cabeçalho `Content-Length`. Isso imuniza o servidor contra a fragmentação natural da Camada de Transporte.
+
+> ⚙️ **Nota de Resiliência:** A adoção do modelo _multi-process_ via `fork()` garante **isolamento total de memória** entre as requisições. Diferente de um modelo baseado em _threads_, uma falha crítica ou corrupção de memória em um processo _worker_ (causada por um payload malformado, por exemplo) é contida e não compromete a execução do daemon principal.
 
 ### 🧩 Arquitetura de Processamento e Handlers Atômicos
- ```mermaid
- sequenceDiagram
- 	participant C as Client (Socket)
- 	participant H as http_handle_client
- 	participant A as api_handle_request
- 	participant HD as Specific Handlers
- 	participant FS as System File (POSIX)
 
- 	C->>H: Request Data (HTTP)
- 	H->>A: parse_http_request(const req)
+```mermaid
+sequenceDiagram
+	participant C as Client (Socket)
+	participant H as http_handle_client
+	participant A as api_handle_request
+	participant HD as Specific Handlers
+	participant FS as System File (POSIX)
 
- 	rect rgb(30, 41, 59)
- 	Note over A: Switch(req->method)
- 	A->>HD: handle_file_read / write / delete
- 	end
+	C->>H: Request Data (HTTP)
+	H->>A: parse_http_request(const req)
 
- 	HD->>FS: Syscall (fopen/remove)
- 	FS-->>HD: Status/Data
- 	HD-->>A: http_response_t
- 	A-->>H: bool (Handled)
- 	H->>C: http_send_response
- ```
+	rect rgb(30, 41, 59)
+	Note over A: Switch(req->method)
+	A->>HD: handle_file_read / write / delete
+	end
 
- > ⚙️ **Nota de Engenharia:** A arquitetura visual comprova o desacoplamento entre o *parsing* de protocolo e a persistência física. A reescrita da base lógica permitiu a visualização clara da delegação de *handlers*, onde cada método HTTP é processado por funções atômicas e imutáveis.
+	HD->>FS: Syscall (fopen/remove)
+	FS-->>HD: Status/Data
+	HD-->>A: http_response_t
+	A-->>H: bool (Handled)
+	H->>C: http_send_response
+```
+
+> ⚙️ **Nota de Engenharia:** A arquitetura visual comprova o desacoplamento entre o _parsing_ de protocolo e a persistência física. A reescrita da base lógica permitiu a visualização clara da delegação de _handlers_, onde cada método HTTP é processado por funções atômicas e imutáveis.
 
 ### ⚡ **Definição dos Métodos RESTful Suportados**
- | Método | Comportamento no Servidor | Finalidade Técnica |
- | :--- | :--- | :--- |
- | **GET** | I/O de Fluxo Estrito (`fread`) | Recuperação de recursos estáticos ou serialização JSON via buffers imutáveis. |
- | **POST** | Persistência Atômica (`"w"`) | Criação integral de novos recursos no sistema de arquivos. |
- | **PUT** | Escrita Idempotente (`"w"`) | Substituição completa e segura de recursos existentes. |
- | **PATCH** | Persistência Incremental (`"a"`) | Atualização parcial via *append* de I/O, otimizando o overhead de reescrita. |
- | **DELETE** | Syscall `remove()` | Exclusão definitiva de recursos via manipulação direta de inodes. |
 
- > ⚙️ **Nota de Persistência:** A tradução direta dos verbos HTTP para modos específicos de I/O (como `w` para **PUT** e `a` para **PATCH**) transforma o sistema de arquivos em um motor de persistência *document-oriented* minimalista. Isso elimina a necessidade de camadas de abstração (ORMs) e garante latência próxima de zero no acesso aos dados.
+| Método     | Comportamento no Servidor        | Finalidade Técnica                                                            |
+| :--------- | :------------------------------- | :---------------------------------------------------------------------------- |
+| **GET**    | I/O de Fluxo Estrito (`fread`)   | Recuperação de recursos estáticos ou serialização JSON via buffers imutáveis. |
+| **POST**   | Persistência Atômica (`"w"`)     | Criação integral de novos recursos no sistema de arquivos.                    |
+| **PUT**    | Escrita Idempotente (`"w"`)      | Substituição completa e segura de recursos existentes.                        |
+| **PATCH**  | Persistência Incremental (`"a"`) | Atualização parcial via _append_ de I/O, otimizando o overhead de reescrita.  |
+| **DELETE** | Syscall `remove()`               | Exclusão definitiva de recursos via manipulação direta de inodes.             |
+
+> ⚙️ **Nota de Persistência:** A tradução direta dos verbos HTTP para modos específicos de I/O (como `w` para **PUT** e `a` para **PATCH**) transforma o sistema de arquivos em um motor de persistência _document-oriented_ minimalista. Isso elimina a necessidade de camadas de abstração (ORMs) e garante latência próxima de zero no acesso aos dados.
 
 ## 🗂️ **Gestão de Estado e Isolamento de Contexto**
- Para manter a simplicidade do protocolo HTTP e permitir múltiplas sessões independentes no mesmo cliente, o projeto implementa:
 
- * **Isolamento via `sessionStorage`:** O estado do jogador (Nickname, Símbolo e ID da Sala) é confinado ao contexto da aba do navegador. Isso permite que um único usuário teste a lógica de jogo abrindo duas abas, sem que uma sobrescreva os dados da outra.
- * **Sincronização de Estado Atômica:** O Front-End consome a API REST via `async/await`, tratando o JSON do servidor como a única fonte da verdade (*Single Source of Truth*).
- * **Imutabilidade de UI:** Toda a manipulação do DOM e eventos (como o atalho `Ctrl+S` no editor) é regida por funções puras, espelhando o rigor técnico do Back-End em C.
+Para manter a simplicidade do protocolo HTTP e permitir múltiplas sessões independentes no mesmo cliente, o projeto implementa:
 
- > ⚙️ **Nota de Escalabilidade:** Ao delegar a lógica de sessão ao cliente, o servidor é reduzido a um motor puramente computacional. Essa arquitetura *stateless* permite que o sistema escale horizontalmente de forma trivial, já que qualquer instância do servidor pode atender qualquer cliente sem a necessidade de sincronizar estados de memória globais.
+- **Isolamento via `sessionStorage`:** O estado do jogador (Nickname, Símbolo e ID da Sala) é confinado ao contexto da aba do navegador. Isso permite que um único usuário teste a lógica de jogo abrindo duas abas, sem que uma sobrescreva os dados da outra.
+- **Sincronização de Estado Atômica:** O Front-End consome a API REST via `async/await`, tratando o JSON do servidor como a única fonte da verdade (_Single Source of Truth_).
+- **Imutabilidade de UI:** Toda a manipulação do DOM e eventos (como o atalho `Ctrl+S` no editor) é regida por funções puras, espelhando o rigor técnico do Back-End em C.
+
+> ⚙️ **Nota de Escalabilidade:** Ao delegar a lógica de sessão ao cliente, o servidor é reduzido a um motor puramente computacional. Essa arquitetura _stateless_ permite que o sistema escale horizontalmente de forma trivial, já que qualquer instância do servidor pode atender qualquer cliente sem a necessidade de sincronizar estados de memória globais.
 
 ### 📊 Topologia de Fluxos e Sincronismo de Estado
- ```mermaid
+
+```mermaid
 graph TD
- 	subgraph Browser_Tab_A
- 		SA[sessionStorage A] -->|Source of Truth| JSA[sala.js]
- 		JSA -->|Async Polling| API
- 	end
+	subgraph Browser_Tab_A
+		SA[sessionStorage A] -->|Source of Truth| JSA[sala.js]
+		JSA -->|Async Polling| API
+	end
 
- 	subgraph Browser_Tab_B
- 		SB[sessionStorage B] -->|Source of Truth| JSB[sala.js]
- 		JSB -->|Async Polling| API
- 	end
+	subgraph Browser_Tab_B
+		SB[sessionStorage B] -->|Source of Truth| JSB[sala.js]
+		JSB -->|Async Polling| API
+	end
 
- 	subgraph Server_C23
- 		API((REST API)) -->|POSIX I/O| DB[(./data/*.json)]
- 	end
+	subgraph Server_C23
+		API((REST API)) -->|POSIX I/O| DB[(./data/*.json)]
+	end
 
- 	style SA fill:#3b82f6,stroke:#fff,color:#fff
- 	style SB fill:#3b82f6,stroke:#fff,color:#fff
- 	style API fill:#1e293b,stroke:#3b82f6,color:#fff
- ```
+	style SA fill:#3b82f6,stroke:#fff,color:#fff
+	style SB fill:#3b82f6,stroke:#fff,color:#fff
+	style API fill:#1e293b,stroke:#3b82f6,color:#fff
+```
 
- > ⚙️ **Nota de Design:** Ao delegar o contexto ao `sessionStorage`, eliminamos colisões de dados no servidor e garantimos a idempotência das operações via API REST, mantendo o servidor 100% livre de estado volátil.
+> ⚙️ **Nota de Design:** Ao delegar o contexto ao `sessionStorage`, eliminamos colisões de dados no servidor e garantimos a idempotência das operações via API REST, mantendo o servidor 100% livre de estado volátil.
 
 ### 🛡️ **Proteção Estrutural e Lazy Cleanup (Garbage Collection)**
- Para blindar o servidor contra ataques de exaustão de recursos (DoS) e garantir a perenidade do sistema de arquivos sem a necessidade de *daemons* em background, o projeto implementa uma gestão autônoma e inteligente do ciclo de vida dos dados:
 
- * **Limites de Payload (OOM Protection):** O processador de rede impõe um teto global de 4MB por requisição (`MAX_PAYLOAD_SIZE`). Em nível de domínio, a escrita de estados de salas sofre um *hard cap* estrito de 512 bytes. Requisições maliciosas são ejetadas sumariamente com o status `413 Payload Too Large`.
- * **Lotação Fixa:** O ecossistema restringe o ambiente a um limite máximo de 5 salas ativas simultaneamente, barrando criações abusivas (`429 Too Many Requests`).
- * **Expurgo Passivo (Lazy Cleanup):** O servidor atua como seu próprio *Garbage Collector*. Aproveitando a varredura natural do diretório (I/O), o motor em C identifica e destrói silenciosamente salas que ultrapassam 4 minutos de inatividade térmica (`st_mtime`), ou aplica um *grace period* atômico de 10 segundos ao detectar o fim matemático de uma partida, permitindo a sincronização final dos clientes antes da obliteração do arquivo.
+Para blindar o servidor contra ataques de exaustão de recursos (DoS) e garantir a perenidade do sistema de arquivos sem a necessidade de _daemons_ em background, o projeto implementa uma gestão autônoma e inteligente do ciclo de vida dos dados:
 
- > ⚙️ **Nota de Segurança:** A arquitetura de *Lazy Cleanup* acoplada às requisições REST garante que a faxina de disco custe **zero ciclos ociosos de CPU**. O servidor limpa o "lixo" apenas durante o trajeto de operações inevitáveis de leitura/escrita, dispensando o uso de *threads* ou timers bloqueantes.
+- **Limites de Payload (OOM Protection):** O processador de rede impõe um teto global de 4MB por requisição (`MAX_PAYLOAD_SIZE`). Em nível de domínio, a escrita de estados de salas sofre um _hard cap_ estrito de 512 bytes. Requisições maliciosas são ejetadas sumariamente com o status `413 Payload Too Large`.
+- **Lotação Fixa:** O ecossistema restringe o ambiente a um limite máximo de 5 salas ativas simultaneamente, barrando criações abusivas (`429 Too Many Requests`).
+- **Expurgo Passivo (Lazy Cleanup):** O servidor atua como seu próprio _Garbage Collector_. Aproveitando a varredura natural do diretório (I/O), o motor em C identifica e destrói silenciosamente salas que ultrapassam 4 minutos de inatividade térmica (`st_mtime`), ou aplica um _grace period_ atômico de 10 segundos ao detectar o fim matemático de uma partida, permitindo a sincronização final dos clientes antes da obliteração do arquivo.
+
+> ⚙️ **Nota de Segurança:** A arquitetura de _Lazy Cleanup_ acoplada às requisições REST garante que a faxina de disco custe **zero ciclos ociosos de CPU**. O servidor limpa o "lixo" apenas durante o trajeto de operações inevitáveis de leitura/escrita, dispensando o uso de _threads_ ou timers bloqueantes.
 
 ## 🔨 **Compilação e Engenharia de Build**
- A construção do binário é orquestrada via **Makefile**, exigindo estritamente a suíte **GCC** (ou Clang) com suporte nativo ao padrão **ISO C23**. Para garantir a integridade da arquitetura imutável e a ausência de efeitos colaterais, o processo de compilação impõe um regime de **Zero Warnings** através de flags de diagnóstico rigorosas:
 
- * **Flags de Rigor:** `-Wall -Wextra -Wpedantic -Werror` — garantem que qualquer inconsistência lógica seja tratada como erro impeditivo.
- * **Padronização Global:** O projeto utiliza um `.editorconfig` para assegurar a consistência sintática e de indentação entre diferentes ambientes de desenvolvimento.
- * **Segurança POSIX:** A compilação define macros específicas para garantir a conformidade com as APIs modernas do **IEEE Std 1003.1 (POSIX)**.
+A construção do binário é orquestrada via **Makefile**, exigindo estritamente a suíte **GCC** (ou Clang) com suporte nativo ao padrão **ISO C23**. Para garantir a integridade da arquitetura imutável e a ausência de efeitos colaterais, o processo de compilação impõe um regime de **Zero Warnings** através de flags de diagnóstico rigorosas:
 
- ```sh
- make clean
- make build
- make run
- ```
+- **Flags de Rigor:** `-Wall -Wextra -Wpedantic -Werror` — garantem que qualquer inconsistência lógica seja tratada como erro impeditivo.
+- **Padronização Global:** O projeto utiliza um `.editorconfig` para assegurar a consistência sintática e de indentação entre diferentes ambientes de desenvolvimento.
+- **Segurança POSIX:** A compilação define macros específicas para garantir a conformidade com as APIs modernas do **IEEE Std 1003.1 (POSIX)**.
 
- > ⚙️ **Nota de Qualidade:** O regime de **Zero Warnings** não é apenas uma preferência estética, mas um requisito de segurança que utiliza o compilador como um auditor estático de código para validar a integridade da memória no padrão ISO C23.
+```sh
+make clean
+make build
+make run
+```
+
+> ⚙️ **Nota de Qualidade:** O regime de **Zero Warnings** não é apenas uma preferência estética, mas um requisito de segurança que utiliza o compilador como um auditor estático de código para validar a integridade da memória no padrão ISO C23.
 
 ---
 
 ## 🚀 **Roadmap e Evolução Arquitetural (Versão 2)**
- A Versão 2 focará em **Alta Performance Absoluta** e escalabilidade horizontal, migrando do modelo de processos para um modelo de eventos assíncronos.
+
+A Versão 2 focará em **Alta Performance Absoluta** e escalabilidade horizontal, migrando do modelo de processos para um modelo de eventos assíncronos.
 
 ### **Proposta Técnica V2: Event-Driven Architecture**
- ```mermaid
- graph TD
- 	subgraph "Kernel Space"
- 		K_NET[Network Interface]
- 		K_SIG[Signal Events]
- 		K_FS[Filesystem Cache]
- 	end
 
- 	subgraph "User Space (V2 Engine)"
- 		EP[Event Multiplexer: kqueue / epoll]
- 		TQ[Task Queue]
+```mermaid
+graph TD
+	subgraph "Kernel Space"
+		K_NET[Network Interface]
+		K_SIG[Signal Events]
+		K_FS[Filesystem Cache]
+	end
 
- 		subgraph "Thread Pool (Workers)"
- 			T1[Thread 1]
- 			T2[Thread 2]
- 			T3[Thread N]
- 		end
- 	end
+	subgraph "User Space (V2 Engine)"
+		EP[Event Multiplexer: kqueue / epoll]
+		TQ[Task Queue]
 
- 	K_NET -- "O(1) Readiness" --> EP
- 	K_SIG -- "Signal Event" --> EP
- 	EP -- "Task Dispatch" --> TQ
- 	TQ -- "Pop" --> T1
- 	TQ -- "Pop" --> T2
+		subgraph "Thread Pool (Workers)"
+			T1[Thread 1]
+			T2[Thread 2]
+			T3[Thread N]
+		end
+	end
 
- 	T1 -- "syscall: sendfile()" --> K_FS
- 	K_FS -- "Direct DMA Transfer" --> K_NET
+	K_NET -- "O(1) Readiness" --> EP
+	K_SIG -- "Signal Event" --> EP
+	EP -- "Task Dispatch" --> TQ
+	TQ -- "Pop" --> T1
+	TQ -- "Pop" --> T2
 
- 	style EP fill:#3b82f6,stroke:#fff,color:#fff
- 	style TQ fill:#1e293b,stroke:#fff,color:#fff
- 	style K_NET fill:#10b981,stroke:#fff,color:#fff
- ```
+	T1 -- "syscall: sendfile()" --> K_FS
+	K_FS -- "Direct DMA Transfer" --> K_NET
 
- 1. **I/O Assíncrono Nativo:** Substituição do `poll()` por **`kqueue`** (FreeBSD) ou **`epoll`** (Linux), permitindo gerenciar milhares de conexões com complexidade $O(1)$.
- 2. **Otimização de Kernel (Zero-Copy):** Implementação da system call **`sendfile()`**, eliminando o *overhead* de copiar bytes do espaço do Kernel para o espaço do usuário antes de enviá-los à rede.
- 3. **Thread Pooling:** Transição para um modelo de Threads persistentes, eliminando o custo de criação de processos e reduzindo drasticamente o *Context Switching*.
+	style EP fill:#3b82f6,stroke:#fff,color:#fff
+	style TQ fill:#1e293b,stroke:#fff,color:#fff
+	style K_NET fill:#10b981,stroke:#fff,color:#fff
+```
+
+1.  **I/O Assíncrono Nativo:** Substituição do `poll()` por **`kqueue`** (FreeBSD) ou **`epoll`** (Linux), permitindo gerenciar milhares de conexões com complexidade $O(1)$.
+2.  **Otimização de Kernel (Zero-Copy):** Implementação da system call **`sendfile()`**, eliminando o _overhead_ de copiar bytes do espaço do Kernel para o espaço do usuário antes de enviá-los à rede.
+3.  **Thread Pooling:** Transição para um modelo de Threads persistentes, eliminando o custo de criação de processos e reduzindo drasticamente o _Context Switching_.
 
 ---
 
 ## 🛠️ **Configuração do Ambiente (Setup Environment)**
- Para garantir a reprodutibilidade da compilação, o suporte rigoroso ao padrão **C23** e a estabilidade do servidor, as instruções abaixo configuram o ecossistema de desenvolvimento do zero. Você pode optar por configurar a toolchain via Homebrew ou via APT (recomendado para Ubuntu/Debian).
+
+Para garantir a reprodutibilidade da compilação, o suporte rigoroso ao padrão **C23** e a estabilidade do servidor, as instruções abaixo configuram o ecossistema de desenvolvimento do zero. Você pode optar por configurar a toolchain via Homebrew ou via APT (recomendado para Ubuntu/Debian).
 
 ### 🧰 **Setup Utils**
- Instalação das ferramentas de rede e transferência essenciais. O `netcat` é fundamental para testes locais de *raw sockets* e depuração manual do protocolo HTTP, enquanto `curl` e `wget` são necessários para os scripts de automação subsequentes.
- ```bash
- sudo apt install --yes netcat-openbsd
- sudo apt install --yes curl
- sudo apt install --yes wget
- ```
+
+Instalação das ferramentas de rede e transferência essenciais. O `netcat` é fundamental para testes locais de _raw sockets_ e depuração manual do protocolo HTTP, enquanto `curl` e `wget` são necessários para os scripts de automação subsequentes.
+
+```bash
+sudo apt install --yes netcat-openbsd
+sudo apt install --yes curl
+sudo apt install --yes wget
+```
 
 ### 📂 **Setup Directory**
- Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e o injeta na variável de ambiente `$PATH`. Isso evita a poluição do sistema e garante que as versões customizadas (e mais recentes) dos compiladores tenham prioridade de execução sobre as versões nativas do SO.
- ```bash
- mkdir -p "${HOME}/.local/bin"
- cat << 'EOF' | tee -a "${HOME}/.bashrc" > "/dev/null"
- export PATH="${HOME}/.local/bin:$PATH"
- EOF
- ```
+
+Prepara um diretório local seguro para binários de usuário (`~/.local/bin`) e o injeta na variável de ambiente `$PATH`. Isso evita a poluição do sistema e garante que as versões customizadas (e mais recentes) dos compiladores tenham prioridade de execução sobre as versões nativas do SO.
+
+```bash
+mkdir -p "${HOME}/.local/bin"
+cat << 'EOF' | tee -a "${HOME}/.bashrc" > "/dev/null"
+export PATH="${HOME}/.local/bin:$PATH"
+EOF
+```
 
 ### 🍺 **Setup Brew (Linuxbrew)**
- *(Opcional se utilizar apenas o APT)*. Instalação do gerenciador de pacotes Homebrew. É uma alternativa robusta para obter pacotes na modalidade *bleeding-edge* (as versões mais recentes possíveis), operando no espaço de usuário (User Space) sem comprometer as dependências do sistema operacional.
- ```bash
- sudo -v
- NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
- cat << 'EOF' | tee -a "${HOME}/.bashrc" > "/dev/null"
- eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
- EOF
- eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
- ```
 
-### 🧱🍺 **Setup GNU Compiler Collection (GCC)** — *Via Homebrew*
- Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (*symlinks*) dinâmicos no seu diretório `~/.local/bin`. O script resolve a versão mais atual lançada no repositório FTP da GNU e mapeia rigorosamente todas as ferramentas da suíte (como `g++`, `gcc-ar`, `gcc-nm`) para uso imediato pelo processo de `make`.
- ```bash
- brew install gcc
- brew install binutils
+_(Opcional se utilizar apenas o APT)_. Instalação do gerenciador de pacotes Homebrew. É uma alternativa robusta para obter pacotes na modalidade _bleeding-edge_ (as versões mais recentes possíveis), operando no espaço de usuário (User Space) sem comprometer as dependências do sistema operacional.
 
- BINUTILS_BIN="$(brew --prefix binutils)/bin"
- for TOOL_PATH in "${BINUTILS_BIN}"/*; do
- 	TOOL="$(basename "${TOOL_PATH}")"
- 	ln -sf "${TOOL_PATH}" "${HOME}/.local/bin/${TOOL}"
- done
+```bash
+sudo -v
+NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+cat << 'EOF' | tee -a "${HOME}/.bashrc" > "/dev/null"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
+EOF
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+```
 
- BREW_BIN="$(brew --prefix)/bin"
- GCC_TARGET="x86_64-pc-linux-gnu"
- GCC_VER="$(ls "${BREW_BIN}" | grep -Eo '^gcc-[0-9]+$' | cut -d- -f2 | sort -n | tail -1)"
- GCC_TOOLS=(
- 	"gcc" "g++" "c++" "cpp" "gcov" "gcc-ar" "gcc-nm" "gcc-ranlib"
- 	"${GCC_TARGET}-gcc" "${GCC_TARGET}-g++" "${GCC_TARGET}-c++"
- 	"${GCC_TARGET}-gcc-ar" "${GCC_TARGET}-gcc-nm" "${GCC_TARGET}-gcc-ranlib"
- 	"${GCC_TARGET}-gfortran" "${GCC_TARGET}-gm2"
- )
- for TOOL in "${GCC_TOOLS[@]}"; do
- 	if [ -f "${BREW_BIN}/${TOOL}-${GCC_VER}" ]; then
- 		ln -sf "${BREW_BIN}/${TOOL}-${GCC_VER}" "${HOME}/.local/bin/${TOOL}"
- 	fi
- done
+### 🧱🍺 **Setup GNU Compiler Collection (GCC)** — _Via Homebrew_
 
- ln -sf "${HOME}/.local/bin/gcc" "${HOME}/.local/bin/cc"
- ln -sf "${HOME}/.local/bin/g++" "${HOME}/.local/bin/CC"
- ```
+Baixa a versão mais recente do GCC pelo Homebrew e cria links simbólicos (_symlinks_) dinâmicos no seu diretório `~/.local/bin`. O script resolve a versão mais atual lançada no repositório FTP da GNU e mapeia rigorosamente todas as ferramentas da suíte (como `g++`, `gcc-ar`, `gcc-nm`) para uso imediato pelo processo de `make`.
 
-### 🐉🍺 **Setup Clang / LLVM Toolchain** — *Via Homebrew*
- Baixa a suíte completa do LLVM pelo Homebrew. Diferente do GCC, o Homebrew trata o LLVM como *keg-only* (isolado do sistema) para evitar conflitos severos com ferramentas nativas, especialmente no macOS. O script abaixo extrai o prefixo do pacote instalado e projeta apenas os binários essenciais (`clang`, `clangd`, `lld`, etc.) de forma segura no seu diretório `~/.local/bin`, garantindo que o servidor LSP e os formatadores funcionem imediatamente.
- ```bash
- brew install llvm
+```bash
+brew install gcc
+brew install binutils
 
- LLVM_BIN="$(brew --prefix llvm)/bin"
- LLVM_TOOLS=(
- 	"clang" "clang++" "clangd" "clang-format" "clang-tidy"
- 	"lldb" "llvm-config" "llvm-ar" "llvm-nm" "llvm-ranlib"
- 	"lld" "ld.lld"
- )
- for TOOL in "${LLVM_TOOLS[@]}"; do
- 	if [ -f "${LLVM_BIN}/${TOOL}" ]; then
- 		ln -sf "${LLVM_BIN}/${TOOL}" "${HOME}/.local/bin/${TOOL}"
- 	fi
- done
+BINUTILS_BIN="$(brew --prefix binutils)/bin"
+for TOOL_PATH in "${BINUTILS_BIN}"/*; do
+	TOOL="$(basename "${TOOL_PATH}")"
+	ln -sf "${TOOL_PATH}" "${HOME}/.local/bin/${TOOL}"
+done
 
- ln -sf "${HOME}/.local/bin/clang" "${HOME}/.local/bin/cc"
- ln -sf "${HOME}/.local/bin/clang++" "${HOME}/.local/bin/CC"
- ```
+BREW_BIN="$(brew --prefix)/bin"
+GCC_TARGET="x86_64-pc-linux-gnu"
+GCC_VER="$(ls "${BREW_BIN}" | grep -Eo '^gcc-[0-9]+$' | cut -d- -f2 | sort -n | tail -1)"
+GCC_TOOLS=(
+	"gcc" "g++" "c++" "cpp" "gcov" "gcc-ar" "gcc-nm" "gcc-ranlib"
+	"${GCC_TARGET}-gcc" "${GCC_TARGET}-g++" "${GCC_TARGET}-c++"
+	"${GCC_TARGET}-gcc-ar" "${GCC_TARGET}-gcc-nm" "${GCC_TARGET}-gcc-ranlib"
+	"${GCC_TARGET}-gfortran" "${GCC_TARGET}-gm2"
+)
+for TOOL in "${GCC_TOOLS[@]}"; do
+	if [ -f "${BREW_BIN}/${TOOL}-${GCC_VER}" ]; then
+		ln -sf "${BREW_BIN}/${TOOL}-${GCC_VER}" "${HOME}/.local/bin/${TOOL}"
+	fi
+done
 
-### 🧱🐧 **Setup GNU Compiler Collection (GCC)** — *Via APT*
- *(Alternativa recomendada para estabilidade no Ubuntu)*. Este bloco adiciona o repositório oficial de testes da toolchain (`ubuntu-toolchain-r/test`), garantindo acesso ao suporte do **C23**. O comando `update-alternatives` é orquestrado para forçar o Kernel a adotar esta versão recém-instalada como o padrão absoluto de compilação C/C++ em todo o ambiente.
- ```bash
- sudo add-apt-repository --yes "ppa:ubuntu-toolchain-r/test"
- sudo apt update
- sudo apt install --yes build-essential
+ln -sf "${HOME}/.local/bin/gcc" "${HOME}/.local/bin/cc"
+ln -sf "${HOME}/.local/bin/g++" "${HOME}/.local/bin/CC"
+```
 
- GCC_VER="$(curl -sL https://ftp.gnu.org/gnu/gcc/ | grep -o 'href="gcc-[0-9]*' | cut -d- -f2 | sort -n | tail -1)"
- sudo apt install --yes "gcc-$GCC_VER"
- sudo apt install --yes "g++-$GCC_VER"
- sudo update-alternatives --install "/usr/bin/gcc" gcc "/usr/bin/gcc-$GCC_VER" 100 \
- 	--slave "/usr/bin/g++" g++ "/usr/bin/g++-$GCC_VER" \
- 	--slave "/usr/bin/c++" c++ "/usr/bin/c++-$GCC_VER" \
- 	--slave "/usr/bin/cpp" cpp "/usr/bin/cpp-$GCC_VER" \
- 	--slave "/usr/bin/gcov" gcov "/usr/bin/gcov-$GCC_VER" \
- 	--slave "/usr/bin/gcc-ar" gcc-ar "/usr/bin/gcc-ar-$GCC_VER" \
- 	--slave "/usr/bin/gcc-nm" gcc-nm "/usr/bin/gcc-nm-$GCC_VER" \
- 	--slave "/usr/bin/gcc-ranlib" gcc-ranlib "/usr/bin/gcc-ranlib-$GCC_VER"
- ```
+### 🐉🍺 **Setup Clang / LLVM Toolchain** — _Via Homebrew_
 
-### 🐉🐧 **Setup Clang / LLVM Toolchain** — *Via APT*
- *(Alternativa recomendada para estabilidade no Ubuntu)*. Instalação da arquitetura de compiladores LLVM/Clang. Fortemente recomendada devido às suas excelentes ferramentas de *linting*, *Language Server Protocol* (`clangd`) e sanitização de memória. O script utiliza o instalador dinâmico oficial (`llvm.sh`), extrai a versão estável mais atual da API do GitHub, normaliza as chaves do repositório APT e registra o ecossistema completo no sistema de alternativas.
- ```bash
- sudo apt update
- sudo apt install --yes clang
- sudo apt install --yes libclang-dev
- sudo apt install --yes clangd
- sudo apt install --yes lldb
+Baixa a suíte completa do LLVM pelo Homebrew. Diferente do GCC, o Homebrew trata o LLVM como _keg-only_ (isolado do sistema) para evitar conflitos severos com ferramentas nativas, especialmente no macOS. O script abaixo extrai o prefixo do pacote instalado e projeta apenas os binários essenciais (`clang`, `clangd`, `lld`, etc.) de forma segura no seu diretório `~/.local/bin`, garantindo que o servidor LSP e os formatadores funcionem imediatamente.
 
- CLANG_VER="$(curl -sL "https://api.github.com/repos/llvm/llvm-project/releases/latest" | grep "tag_name" | cut -d '"' -f 4 | sed 's/llvmorg-//' | cut -d. -f1)"
- wget -qO- "https://apt.llvm.org/llvm.sh" | sudo bash -s -- "$CLANG_VER" all
- sudo grep -l "apt.llvm.org" /etc/apt/sources.list.d/*.list | \
- 	xargs sudo sed -i 's/deb http/deb [arch=amd64] http/g'
- sudo update-alternatives --install /usr/bin/clang clang "/usr/bin/clang-$CLANG_VER" 100 \
- 	--slave "/usr/bin/clang++" clang++ "/usr/bin/clang++-$CLANG_VER" \
- 	--slave "/usr/bin/clangd" clangd "/usr/bin/clangd-$CLANG_VER" \
- 	--slave "/usr/bin/clang-format" clang-format "/usr/bin/clang-format-$CLANG_VER" \
- 	--slave "/usr/bin/clang-tidy" clang-tidy "/usr/bin/clang-tidy-$CLANG_VER" \
- 	--slave "/usr/bin/lldb" lldb "/usr/bin/lldb-$CLANG_VER" \
- 	--slave "/usr/bin/llvm-config" llvm-config "/usr/bin/llvm-config-$CLANG_VER" \
- 	--slave "/usr/bin/llvm-ar" llvm-ar "/usr/bin/llvm-ar-$CLANG_VER" \
- 	--slave "/usr/bin/llvm-nm" llvm-nm "/usr/bin/llvm-nm-$CLANG_VER" \
- 	--slave "/usr/bin/llvm-ranlib" llvm-ranlib "/usr/bin/llvm-ranlib-$CLANG_VER"
- sudo update-alternatives --install "/usr/bin/lld" lld "/usr/bin/lld-$CLANG_VER" 100 \
- 	--slave "/usr/bin/ld.lld" ld.lld "/usr/bin/ld.lld-$CLANG_VER"
- ```
+```bash
+brew install llvm
+
+LLVM_BIN="$(brew --prefix llvm)/bin"
+LLVM_TOOLS=(
+	"clang" "clang++" "clangd" "clang-format" "clang-tidy"
+	"lldb" "llvm-config" "llvm-ar" "llvm-nm" "llvm-ranlib"
+	"lld" "ld.lld"
+)
+for TOOL in "${LLVM_TOOLS[@]}"; do
+	if [ -f "${LLVM_BIN}/${TOOL}" ]; then
+		ln -sf "${LLVM_BIN}/${TOOL}" "${HOME}/.local/bin/${TOOL}"
+	fi
+done
+
+ln -sf "${HOME}/.local/bin/clang" "${HOME}/.local/bin/cc"
+ln -sf "${HOME}/.local/bin/clang++" "${HOME}/.local/bin/CC"
+```
+
+### 🧱🐧 **Setup GNU Compiler Collection (GCC)** — _Via APT_
+
+_(Alternativa recomendada para estabilidade no Ubuntu)_. Este bloco adiciona o repositório oficial de testes da toolchain (`ubuntu-toolchain-r/test`), garantindo acesso ao suporte do **C23**. O comando `update-alternatives` é orquestrado para forçar o Kernel a adotar esta versão recém-instalada como o padrão absoluto de compilação C/C++ em todo o ambiente.
+
+```bash
+sudo add-apt-repository --yes "ppa:ubuntu-toolchain-r/test"
+sudo apt update
+sudo apt install --yes build-essential
+
+GCC_VER="$(curl -sL https://ftp.gnu.org/gnu/gcc/ | grep -o 'href="gcc-[0-9]*' | cut -d- -f2 | sort -n | tail -1)"
+sudo apt install --yes "gcc-$GCC_VER"
+sudo apt install --yes "g++-$GCC_VER"
+sudo update-alternatives --install "/usr/bin/gcc" gcc "/usr/bin/gcc-$GCC_VER" 100 \
+	--slave "/usr/bin/g++" g++ "/usr/bin/g++-$GCC_VER" \
+	--slave "/usr/bin/c++" c++ "/usr/bin/c++-$GCC_VER" \
+	--slave "/usr/bin/cpp" cpp "/usr/bin/cpp-$GCC_VER" \
+	--slave "/usr/bin/gcov" gcov "/usr/bin/gcov-$GCC_VER" \
+	--slave "/usr/bin/gcc-ar" gcc-ar "/usr/bin/gcc-ar-$GCC_VER" \
+	--slave "/usr/bin/gcc-nm" gcc-nm "/usr/bin/gcc-nm-$GCC_VER" \
+	--slave "/usr/bin/gcc-ranlib" gcc-ranlib "/usr/bin/gcc-ranlib-$GCC_VER"
+```
+
+### 🐉🐧 **Setup Clang / LLVM Toolchain** — _Via APT_
+
+_(Alternativa recomendada para estabilidade no Ubuntu)_. Instalação da arquitetura de compiladores LLVM/Clang. Fortemente recomendada devido às suas excelentes ferramentas de _linting_, _Language Server Protocol_ (`clangd`) e sanitização de memória. O script utiliza o instalador dinâmico oficial (`llvm.sh`), extrai a versão estável mais atual da API do GitHub, normaliza as chaves do repositório APT e registra o ecossistema completo no sistema de alternativas.
+
+```bash
+sudo apt update
+sudo apt install --yes clang
+sudo apt install --yes libclang-dev
+sudo apt install --yes clangd
+sudo apt install --yes lldb
+
+CLANG_VER="$(curl -sL "https://api.github.com/repos/llvm/llvm-project/releases/latest" | grep "tag_name" | cut -d '"' -f 4 | sed 's/llvmorg-//' | cut -d. -f1)"
+wget -qO- "https://apt.llvm.org/llvm.sh" | sudo bash -s -- "$CLANG_VER" all
+sudo grep -l "apt.llvm.org" /etc/apt/sources.list.d/*.list | \
+	xargs sudo sed -i 's/deb http/deb [arch=amd64] http/g'
+sudo update-alternatives --install /usr/bin/clang clang "/usr/bin/clang-$CLANG_VER" 100 \
+	--slave "/usr/bin/clang++" clang++ "/usr/bin/clang++-$CLANG_VER" \
+	--slave "/usr/bin/clangd" clangd "/usr/bin/clangd-$CLANG_VER" \
+	--slave "/usr/bin/clang-format" clang-format "/usr/bin/clang-format-$CLANG_VER" \
+	--slave "/usr/bin/clang-tidy" clang-tidy "/usr/bin/clang-tidy-$CLANG_VER" \
+	--slave "/usr/bin/lldb" lldb "/usr/bin/lldb-$CLANG_VER" \
+	--slave "/usr/bin/llvm-config" llvm-config "/usr/bin/llvm-config-$CLANG_VER" \
+	--slave "/usr/bin/llvm-ar" llvm-ar "/usr/bin/llvm-ar-$CLANG_VER" \
+	--slave "/usr/bin/llvm-nm" llvm-nm "/usr/bin/llvm-nm-$CLANG_VER" \
+	--slave "/usr/bin/llvm-ranlib" llvm-ranlib "/usr/bin/llvm-ranlib-$CLANG_VER"
+sudo update-alternatives --install "/usr/bin/lld" lld "/usr/bin/lld-$CLANG_VER" 100 \
+	--slave "/usr/bin/ld.lld" ld.lld "/usr/bin/ld.lld-$CLANG_VER"
+```
