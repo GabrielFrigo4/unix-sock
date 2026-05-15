@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -18,54 +19,78 @@ static void log_server_addresses(const uint16_t port, const ip_mode_t mode)
 
 	printf("[INFO]: Servidor inicializado.\n");
 	printf("[INFO]: Acesse o servidor através dos links abaixo:\n");
-	printf("        [LocalHost] -> http://localhost:%u/\n", port);
 
-	if (getifaddrs(&interfaces) != 0)
+	if (getifaddrs(&interfaces) == 0)
 	{
-		if (mode == IP_MODE_IPV4_ONLY || mode == IP_MODE_DUAL_STACK)
+		for (const struct ifaddrs *temp_addr = interfaces; temp_addr != nullptr;
+		     temp_addr = temp_addr->ifa_next)
 		{
-			printf("        [IPv4]      -> http://127.0.0.1:%u/\n", port);
-		}
+			if (temp_addr->ifa_addr == nullptr)
+				continue;
 
-		if (mode == IP_MODE_IPV6_ONLY || mode == IP_MODE_DUAL_STACK)
-		{
-			printf("        [IPv6]      -> http://[::1]:%u/\n", port);
-		}
+			const int family = temp_addr->ifa_addr->sa_family;
 
-		printf("\n[INFO]: Pressione Ctrl+C para encerrar o servidor.\n\n");
-		return;
+			if (family == AF_INET && (mode == IP_MODE_IPV4_ONLY || mode == IP_MODE_DUAL_STACK))
+			{
+				const struct sockaddr_in *sock_addr = (const struct sockaddr_in *)
+				                                          temp_addr->ifa_addr;
+				inet_ntop(AF_INET, &sock_addr->sin_addr, ip_str, sizeof(ip_str));
+				printf("        [ip4-addr] -> http://%s:%u/\n", ip_str, port);
+				printf("        [ip4-addr] -> https://%s:%u/\n", ip_str, port);
+			}
+			else if (
+			    family == AF_INET6 && (mode == IP_MODE_IPV6_ONLY || mode == IP_MODE_DUAL_STACK)
+			)
+			{
+				const struct sockaddr_in6 *sock_addr6 = (const struct sockaddr_in6 *)
+				                                            temp_addr->ifa_addr;
+				inet_ntop(AF_INET6, &sock_addr6->sin6_addr, ip_str, sizeof(ip_str));
+				printf("        [ip6-addr] -> http://[%s]:%u/\n", ip_str, port);
+				printf("        [ip6-addr] -> https://[%s]:%u/\n", ip_str, port);
+			}
+		}
+		freeifaddrs(interfaces);
 	}
 
-	for (const struct ifaddrs *temp_addr = interfaces; temp_addr != nullptr;
-	     temp_addr = temp_addr->ifa_next)
+	FILE *hosts_file = fopen("/etc/hosts", "r");
+	if (hosts_file)
 	{
-		if (temp_addr->ifa_addr == nullptr)
+		char line[256];
+		while (fgets(line, sizeof(line), hosts_file))
 		{
-			continue;
-		}
+			char *comment = strchr(line, '#');
+			if (comment)
+				*comment = '\0';
 
-		const int family = temp_addr->ifa_addr->sa_family;
+			char *ip_token = strtok(line, " \t\n\r");
+			if (!ip_token)
+				continue;
 
-		if (family == AF_INET && (mode == IP_MODE_IPV4_ONLY || mode == IP_MODE_DUAL_STACK))
-		{
-			const struct sockaddr_in *const sock_addr = (const struct sockaddr_in *)
-			                                                temp_addr->ifa_addr;
-			inet_ntop(AF_INET, &sock_addr->sin_addr, ip_str, sizeof(ip_str));
-			printf("        [IPv4]      -> http://%s:%u/\n", ip_str, port);
+			const char *label = "host-invalid";
+			struct in_addr v4_test;
+			struct in6_addr v6_test;
+
+			if (inet_pton(AF_INET, ip_token, &v4_test) == 1)
+			{
+				label = "ip4-host";
+			}
+			else if (inet_pton(AF_INET6, ip_token, &v6_test) == 1)
+			{
+				label = "ip6-host";
+			}
+
+			char *hostname_token;
+			while ((hostname_token = strtok(NULL, " \t\n\r")))
+			{
+				printf("        [%-8s] -> http://%s:%u/\n", label, hostname_token, port);
+				printf("        [%-8s] -> https://%s:%u/\n", label, hostname_token, port);
+			}
 		}
-		else if (
-		    family == AF_INET6 && (mode == IP_MODE_IPV6_ONLY || mode == IP_MODE_DUAL_STACK)
-		)
-		{
-			const struct sockaddr_in6 *const sock_addr6 = (const struct sockaddr_in6 *)
-			                                                  temp_addr->ifa_addr;
-			inet_ntop(AF_INET6, &sock_addr6->sin6_addr, ip_str, sizeof(ip_str));
-			printf("        [IPv6]      -> http://[%s]:%u/\n", ip_str, port);
-		}
+		fclose(hosts_file);
 	}
 
-	freeifaddrs(interfaces);
-	interfaces = nullptr;
+	printf("        [domain]   -> http://%s:%u/\n", "game.gabrielfrigo.dev.br", port);
+	printf("        [domain]   -> https://%s:%u/\n", "game.gabrielfrigo.dev.br", port);
 	printf("\n[INFO]: Pressione Ctrl+C para encerrar o servidor.\n\n");
 }
 
