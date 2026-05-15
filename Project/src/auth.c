@@ -106,7 +106,6 @@ static bool generate_token(const char *username, char *out_token, size_t token_s
 	char timestamp_hex[TIMESTAMP_HEX_LEN + 1];
 	snprintf(timestamp_hex, sizeof(timestamp_hex), "%016llx", (unsigned long long)now);
 
-	/* payload = username + ":" + timestamp_hex */
 	char payload[256];
 	snprintf(payload, sizeof(payload), "%s:%s", username, timestamp_hex);
 
@@ -158,7 +157,6 @@ bool auth_init(void)
 		return false;
 	}
 
-	/* Gerar secret aleatório */
 	FILE *const urandom = fopen("/dev/urandom", "rb");
 	if (!urandom)
 	{
@@ -185,11 +183,9 @@ bool auth_login(const char *username, const char *password, char *out_token, siz
 	if (!initialized)
 		return false;
 
-	/* Verificar username */
 	if (strcmp(username, admin_user) != 0)
 		return false;
 
-	/* Verificar senha via hash */
 	unsigned char input_hash[HASH_SIZE];
 	if (!compute_sha256(password, strlen(password), input_hash))
 		return false;
@@ -209,7 +205,6 @@ bool auth_validate_token(const char *token)
 	if (token_len != TIMESTAMP_HEX_LEN + HMAC_HEX_LEN)
 		return false;
 
-	/* Extrair timestamp */
 	char timestamp_hex[TIMESTAMP_HEX_LEN + 1] = {};
 	memcpy(timestamp_hex, token, TIMESTAMP_HEX_LEN);
 	timestamp_hex[TIMESTAMP_HEX_LEN] = '\0';
@@ -218,14 +213,12 @@ bool auth_validate_token(const char *token)
 	if (sscanf(timestamp_hex, "%llx", &ts_val) != 1)
 		return false;
 
-	/* Verificar expiração */
 	const time_t now = time(nullptr);
 	if (now - (time_t)ts_val > TOKEN_TTL_SECS)
 		return false;
 	if ((time_t)ts_val > now + 60)
-		return false; /* Token do futuro? */
+		return false;
 
-	/* Recomputar HMAC */
 	char payload[256];
 	snprintf(payload, sizeof(payload), "%s:%s", admin_user, timestamp_hex);
 
@@ -241,7 +234,6 @@ bool auth_validate_token(const char *token)
 		return false;
 	}
 
-	/* Extrair HMAC recebido */
 	unsigned char received_hmac[HASH_SIZE];
 	if (!hex_to_bytes(token + TIMESTAMP_HEX_LEN, received_hmac, HASH_SIZE))
 		return false;

@@ -61,5 +61,5 @@ erase: clean
 
 .PHONY: clangd
 clangd: clean
-	bear -- $(MAKE) build
+	@bear -- $(MAKE) build
 	@echo "📝 Arquivo 'compile_commands.json' atualizado para o Clangd!"

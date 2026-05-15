@@ -7,5 +7,6 @@
 /* ── Configuração de Rede ────────────────────────────────── */
 
 constexpr uint16_t PORT = 443 * 80 + 1;
+constexpr const char IP[] = "localhost";
 
 #endif

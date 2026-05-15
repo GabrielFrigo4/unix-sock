@@ -15,6 +15,7 @@ constexpr int HTTP_STATUS_NOT_ALLOWED = 405;
 constexpr int HTTP_STATUS_CONFLICT = 409;
 constexpr int HTTP_STATUS_URI_TOO_LONG = 414;
 constexpr int HTTP_STATUS_TOO_MANY = 429;
+constexpr int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
 /* ── Configurações e Limites ─────────────────────────────── */
 

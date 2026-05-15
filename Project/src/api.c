@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/random.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -157,17 +158,25 @@ static void handle_create_room(const int client_socket, const http_request_t *co
 		return;
 	}
 
-	/* Gerar room ID */
-	const unsigned int seed = (unsigned int)time(nullptr) ^ (unsigned int)getpid();
-	srand(seed);
-
 	char room_id[ROOM_ID_SIZE];
 	constexpr char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	constexpr size_t charset_len = sizeof(charset) - 1;
 
+	unsigned char rand_bytes[ROOM_ID_SIZE - 1];
+	if (getrandom(rand_bytes, sizeof(rand_bytes), 0) != sizeof(rand_bytes))
+	{
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_INTERNAL_SERVER_ERROR,
+		    "Internal Error",
+		    "Falha ao gerar entropia."
+		);
+		return;
+	}
+
 	for (size_t i = 0; i < ROOM_ID_SIZE - 1; i++)
 	{
-		room_id[i] = charset[(size_t)rand() % charset_len];
+		room_id[i] = charset[rand_bytes[i] % charset_len];
 	}
 	room_id[ROOM_ID_SIZE - 1] = '\0';
 
@@ -192,7 +201,6 @@ static void handle_create_room(const int client_socket, const http_request_t *co
 		return;
 	}
 
-	/* Responder com room_id + symbol + estado */
 	char response[RESP_BUFFER_SIZE];
 	snprintf(
 	    response,
@@ -317,7 +325,6 @@ static void handle_make_move(
 		return;
 	}
 
-	/* Retornar estado atualizado */
 	char state_json[GAME_JSON_BUFFER] = {};
 	const game_error_t state_err = game_get_state(room_id, state_json, sizeof(state_json));
 	(void)state_err;
@@ -521,7 +528,6 @@ static bool route_room_sub(
     const int client_socket, const http_request_t *const req, const char *path_after_rooms
 )
 {
-	/* Extrair room_id: tudo até próximo '/' ou fim */
 	const char *slash = strchr(path_after_rooms, '/');
 
 	char room_id[ROOM_ID_SIZE] = {};
@@ -549,7 +555,6 @@ static bool route_room_sub(
 
 	if (!slash)
 	{
-		/* GET /api/rooms/{id} */
 		if (req->method == HTTP_GET)
 		{
 			handle_get_room(client_socket, room_id);
@@ -600,21 +605,18 @@ bool api_handle_request(const int client_socket, http_request_t *const req)
 
 	/* ── Rotas públicas do jogo ─────────────────────────── */
 
-	/* POST /api/rooms → criar sala */
 	if (strcmp(req->path, ROUTE_ROOMS) == 0 && req->method == HTTP_POST)
 	{
 		handle_create_room(client_socket, req);
 		return true;
 	}
 
-	/* GET /api/rooms → listar salas */
 	if (strcmp(req->path, ROUTE_ROOMS) == 0 && req->method == HTTP_GET)
 	{
 		handle_list_rooms(client_socket);
 		return true;
 	}
 
-	/* /api/rooms/{id}... */
 	if (strncmp(req->path, ROUTE_ROOMS_SLASH, ROUTE_ROOMS_SLASH_LEN) == 0)
 	{
 		return route_room_sub(client_socket, req, req->path + ROUTE_ROOMS_SLASH_LEN);

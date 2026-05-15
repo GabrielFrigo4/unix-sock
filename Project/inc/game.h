@@ -51,7 +51,9 @@ typedef enum game_error
 	GAME_ERR_PARSE,
 	GAME_ERR_IO
 } game_error_t;
+
 /* ── Interface do Motor de Jogo ──────────────────────────── */
+
 [[nodiscard]] game_error_t game_create_room(
     const char *room_id, const char *player_name, char *out_json, size_t json_size
 );

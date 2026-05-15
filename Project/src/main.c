@@ -56,7 +56,7 @@ static int setup_self_pipe(void)
 	return sig_pipe[0];
 }
 
-static void process_signals(const int pipe_read_fd, int *const running)
+static void process_signals(const int pipe_read_fd, bool *const running)
 {
 	int signum;
 	while (read(pipe_read_fd, &signum, sizeof(int)) == sizeof(int))
@@ -75,7 +75,7 @@ static void process_signals(const int pipe_read_fd, int *const running)
 		if (signum == SIGINT || signum == SIGTSTP)
 		{
 			printf("\n[INFO]: Shutdown signal received...\n");
-			*running = 0;
+			*running = false;
 		}
 	}
 }
@@ -133,18 +133,14 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	const int server_fd = server_init(PORT, IP_MODE_DUAL_STACK);
-
-	/* Inicializar antes de qualquer fork() para que todos os filhos
-	 * herdem o mesmo server_secret via cópia de memória do pai. */
-	api_init();
-
+	const int server_fd = server_init(IP, PORT, IP_MODE_DUAL_STACK);
 	struct pollfd fds[POLL_EVENT_COUNT] = {
 	    {.fd = server_fd, .events = POLLIN, .revents = 0},
 	    {.fd = pipe_read_fd, .events = POLLIN, .revents = 0}
 	};
 
-	int running = 1;
+	bool running = true;
+	api_init();
 
 	while (running)
 	{

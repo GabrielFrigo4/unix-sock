@@ -17,6 +17,7 @@ constexpr size_t ROOM_PREFIX_LEN = sizeof(ROOM_PREFIX) - 1;
 constexpr char ROOM_SUFFIX[] = ".json";
 constexpr size_t PATH_BUF = 256;
 constexpr size_t FILE_BUF = 1024;
+
 /* ── Combinações vencedoras ──────────────────────────────── */
 
 static const size_t WIN_COMBOS[8][3] = {
@@ -185,7 +186,6 @@ static bool load_room(const char *room_id, game_room_t *room)
 		return false;
 	room->turn = char_to_symbol(turn_str[0]);
 
-	/* Parsear players — busca dentro do objeto "players":{...} */
 	const char *players_start = strstr(buf, "\"players\":{");
 	if (!players_start)
 		return false;
@@ -214,7 +214,6 @@ static bool load_room(const char *room_id, game_room_t *room)
 	if (o_is_null)
 		room->player_o[0] = '\0';
 
-	/* winner */
 	bool winner_null = false;
 	char winner_str[16] = {};
 	json_extract_nullable_string(buf, "winner", winner_str, sizeof(winner_str), &winner_null);
@@ -395,7 +394,6 @@ void game_purge_expired(void)
 		char filepath[PATH_BUF];
 		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, ent->d_name);
 
-		/* Extrair room_id do nome do arquivo */
 		const char *id_start = ent->d_name + ROOM_PREFIX_LEN;
 		const char *dot = strstr(id_start, ROOM_SUFFIX);
 		if (!dot)
@@ -411,7 +409,6 @@ void game_purge_expired(void)
 		game_room_t room = {};
 		if (!load_room(room_id, &room))
 		{
-			/* Arquivo corrompido: remover */
 			remove(filepath);
 			continue;
 		}
@@ -475,7 +472,6 @@ game_error_t game_create_room(
 		return GAME_ERR_MAX_ROOMS;
 	}
 
-	/* Verificar se já existe */
 	char filepath[PATH_BUF];
 	build_filepath(filepath, sizeof(filepath), room_id);
 
@@ -517,21 +513,18 @@ game_error_t game_join_room(
 	if (!load_room(room_id, &room))
 		return GAME_ERR_ROOM_NOT_FOUND;
 
-	/* Se já é o jogador X, retorna X */
 	if (strcmp(room.player_x, player_name) == 0)
 	{
 		*out_symbol = SYMBOL_X;
 		return GAME_OK;
 	}
 
-	/* Se já é o jogador O, retorna O */
 	if (room.player_o[0] != '\0' && strcmp(room.player_o, player_name) == 0)
 	{
 		*out_symbol = SYMBOL_O;
 		return GAME_OK;
 	}
 
-	/* Se O está vazio, atribuir */
 	if (room.player_o[0] == '\0')
 	{
 		const size_t name_len = strlen(player_name);
@@ -569,7 +562,6 @@ game_error_t game_make_move(
 	if (room.turn != symbol)
 		return GAME_ERR_NOT_YOUR_TURN;
 
-	/* Verificar que o jogador corresponde ao símbolo */
 	if (symbol == SYMBOL_X && strcmp(room.player_x, player_name) != 0)
 	{
 		return GAME_ERR_INVALID_SYMBOL;

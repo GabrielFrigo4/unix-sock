@@ -15,6 +15,6 @@ typedef enum ip_mode
 
 /* ── Interface de Rede ───────────────────────────────────── */
 
-[[nodiscard]] int server_init(const uint16_t port, const ip_mode_t mode);
+[[nodiscard]] int server_init(const char *ip, const uint16_t port, const ip_mode_t mode);
 
 #endif
