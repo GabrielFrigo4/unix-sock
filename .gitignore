@@ -63,8 +63,8 @@ dkms.conf
 data/
 
 # O executável principal gerado pelo Makefile
-server.exe
-server
+game.exe
+game
 
 # Diretório de objetos
 obj/
