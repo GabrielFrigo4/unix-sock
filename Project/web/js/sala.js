@@ -1,10 +1,10 @@
 const Config = {
-	roomFile: sessionStorage.getItem("sala"),
+	roomId: sessionStorage.getItem("sala"),
 	playerName: sessionStorage.getItem("jogador"),
 	playerSymbol: sessionStorage.getItem("simbolo"),
 };
 
-if (!Config.roomFile || !Config.playerName || !Config.playerSymbol) {
+if (!Config.roomId || !Config.playerName || !Config.playerSymbol) {
 	window.location.href = "/";
 }
 
@@ -18,23 +18,13 @@ const UI = {
 	tempoLabel: document.getElementById("lblTempo"),
 };
 
-UI.roomLabel.textContent = Config.roomFile.replace("sala_", "").replace(".json", "");
+UI.roomLabel.textContent = Config.roomId;
 UI.playerLabel.textContent = Config.playerName;
 UI.symbolLabel.textContent = Config.playerSymbol;
 
 const State = {
 	gameData: null,
 	isUpdating: false,
-};
-
-const syncWithServer = async () => {
-	State.isUpdating = true;
-	await fetch(`/api/data/${Config.roomFile}`, {
-		method: "PUT",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(State.gameData),
-	});
-	State.isUpdating = false;
 };
 
 const renderGameOver = () => {
@@ -78,9 +68,9 @@ const atualizarCronometro = () => {
 		return;
 	}
 
-	const agora = Date.now();
-	const tempoDecorrido = Math.floor((agora - State.gameData.createdAt) / 1000);
-	const tempoRestante = 240 - tempoDecorrido;
+	const agoraSecs = Math.floor(Date.now() / 1000);
+	const tempoDecorrido = agoraSecs - State.gameData.createdAt;
+	const tempoRestante = 300 - tempoDecorrido;
 
 	if (tempoRestante <= 0) {
 		UI.tempoLabel.textContent = "00:00";
@@ -100,7 +90,7 @@ const fetchServerState = async () => {
 	if (State.isUpdating || State.gameData?.winner) return;
 
 	try {
-		const res = await fetch(`/api/data/${Config.roomFile}`);
+		const res = await fetch(`/api/rooms/${Config.roomId}`);
 
 		if (res.status === 404) {
 			if (!State.gameData?.winner) {
@@ -114,36 +104,10 @@ const fetchServerState = async () => {
 		if (State.isUpdating) return;
 		State.gameData = data;
 
-		if (Config.playerSymbol === "O" && !State.gameData.players.O) {
-			State.gameData.players.O = Config.playerName;
-			await syncWithServer();
-		}
-
 		updateInterface();
 		atualizarCronometro();
 	} catch (e) {
 		console.error("Erro ao buscar estado:", e);
-	}
-};
-
-const checkWinner = () => {
-	const winningCombos = [
-		[0, 1, 2],
-		[3, 4, 5],
-		[6, 7, 8],
-		[0, 3, 6],
-		[1, 4, 7],
-		[2, 5, 8],
-		[0, 4, 8],
-		[2, 4, 6],
-	];
-
-	for (const [a, b, c] of winningCombos) {
-		const board = State.gameData.board;
-		if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-			State.gameData.winner = board[a];
-			return;
-		}
 	}
 };
 
@@ -156,17 +120,33 @@ window.jogar = async (index) => {
 	)
 		return;
 
-	State.gameData.board[index] = Config.playerSymbol;
-	checkWinner();
+	State.isUpdating = true;
 
-	if (!State.gameData.winner) {
-		const isBoardFull = !State.gameData.board.includes("");
-		if (isBoardFull) State.gameData.winner = "Empate";
-		else State.gameData.turn = Config.playerSymbol === "X" ? "O" : "X";
+	try {
+		const res = await fetch(`/api/rooms/${Config.roomId}/move`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				player: Config.playerName,
+				symbol: Config.playerSymbol,
+				cell: index,
+			}),
+		});
+
+		if (!res.ok) {
+			const data = await res.json();
+			console.warn("Jogada rejeitada:", data.error);
+		} else {
+			const data = await res.json();
+			State.gameData = data;
+			updateInterface();
+			atualizarCronometro();
+		}
+	} catch (e) {
+		console.error("Erro ao enviar jogada:", e);
+	} finally {
+		State.isUpdating = false;
 	}
-
-	updateInterface();
-	await syncWithServer();
 };
 
 window.voltarParaLobby = () => {

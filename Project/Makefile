@@ -2,8 +2,8 @@ CC       := gcc
 CFLAGS   := -std=c23 -fstack-protector-strong -fPIE -flto
 WFLAGS   := -Wformat=2 -Wall -Wextra -Wvla -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror -Wno-cpp -Wno-missing-field-initializers -Wno-unknown-warning-option
 CPPFLAGS := -I./inc -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_FORTIFY_SOURCE=2
-LDFLAGS  := -flto -pie -Wl,-z,relro,-z,now
-TARGET   := server
+LDFLAGS  := -flto -pie -Wl,-z,relro,-z,now -lcrypto
+TARGET   := webserver
 
 ifdef DEBUG
     CFLAGS += -O1 -g -fsanitize=address,undefined
@@ -39,8 +39,15 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(HEADERS)
 .PHONY: run
 run: build
 	@echo "🟢 Iniciando Servidor..."
-	@./$(TARGET)
+	@ADMIN_USER=admin ADMIN_PASS=admin ./$(TARGET)
 	@echo "🛑 Servidor Encerrado."
+
+.PHONY: update
+update: build
+	@echo "🚀 Enviando arquivos para o servidor Oracle..."
+	@./update-server.sh $(TARGET)
+	@./update-server.sh web
+	@echo "✅ Deploy concluído!"
 
 .PHONY: clean clear
 clean clear:

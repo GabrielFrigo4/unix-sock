@@ -9,14 +9,19 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "api.h"
 #include "http.h"
 #include "main.h"
 #include "server.h"
+
+/* ── Definições e Estado ─────────────────────────────────── */
 
 constexpr size_t PIPE_FD_COUNT = 2;
 constexpr size_t POLL_EVENT_COUNT = 2;
 
 static int sig_pipe[PIPE_FD_COUNT];
+
+/* ── Gerenciamento de Sinais (Self-Pipe) ──────────────────── */
 
 static void generic_signal_handler(const int signum)
 {
@@ -75,6 +80,8 @@ static void process_signals(const int pipe_read_fd, int *const running)
 	}
 }
 
+/* ── Ciclo de Vida do Processo ───────────────────────────── */
+
 static void handle_child_process(const int server_fd, const int client_socket)
 {
 	close(server_fd);
@@ -116,6 +123,8 @@ static void accept_and_fork(const int server_fd)
 	close(client_socket);
 }
 
+/* ── Entry Point (Processo Pai) ──────────────────────────── */
+
 int main(void)
 {
 	const int pipe_read_fd = setup_self_pipe();
@@ -125,6 +134,10 @@ int main(void)
 	}
 
 	const int server_fd = server_init(PORT, IP_MODE_DUAL_STACK);
+
+	/* Inicializar antes de qualquer fork() para que todos os filhos
+	 * herdem o mesmo server_secret via cópia de memória do pai. */
+	api_init();
 
 	struct pollfd fds[POLL_EVENT_COUNT] = {
 	    {.fd = server_fd, .events = POLLIN, .revents = 0},

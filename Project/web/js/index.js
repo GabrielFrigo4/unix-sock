@@ -3,70 +3,91 @@ const UI = {
 	roomList: document.getElementById("roomList"),
 };
 
-const generateRoomId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-
 const fetchRooms = async () => {
-	const res = await fetch("/api/files");
-	const files = await res.json();
-	const rooms = files.filter((file) => file.startsWith("sala_") && file.endsWith(".json"));
+	try {
+		const res = await fetch("/api/rooms");
+		const rooms = await res.json();
 
-	if (rooms.length === 0) {
-		UI.roomList.innerHTML =
-			'<div style="text-align: center; color: #94a3b8;">Nenhuma sala aberta. Crie uma!</div>';
-		return;
+		if (rooms.length === 0) {
+			UI.roomList.innerHTML =
+				'<div style="text-align: center; color: #94a3b8;">Nenhuma sala aberta. Crie uma!</div>';
+			return;
+		}
+
+		UI.roomList.innerHTML = rooms
+			.map((room) => {
+				const playerO = room.player_o
+					? `<span class="room-players">vs ${room.player_o}</span>`
+					: '<span class="room-players waiting">Aguardando oponente...</span>';
+
+				return `
+                <div class="room-card">
+                    <div class="room-info">
+                        <strong>Sala: ${room.id}</strong>
+                        <br><small>${room.player_x} ${playerO}</small>
+                    </div>
+                    <button class="btn-join" onclick="joinRoom('${room.id}')">Entrar 🎮</button>
+                </div>
+            `;
+			})
+			.join("");
+	} catch (e) {
+		console.error("Erro ao buscar salas:", e);
 	}
-
-	UI.roomList.innerHTML = rooms
-		.map((room) => {
-			const formattedId = room.replace("sala_", "").replace(".json", "");
-			return `
-            <div class="room-card">
-                <div class="room-info">Sala: ${formattedId}</div>
-                <button class="btn-join" onclick="joinRoom('${room}')">Entrar 🎮</button>
-            </div>
-        `;
-		})
-		.join("");
 };
 
 window.criarSala = async () => {
 	const player = UI.playerName();
 	if (!player) return alert("Digite seu Nickname antes de criar uma sala!");
 
-	const roomId = generateRoomId();
-	const roomFile = `sala_${roomId}.json`;
+	try {
+		const res = await fetch("/api/rooms", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ player }),
+		});
 
-	await fetch(`/api/data/${roomFile}`, {
-		method: "POST",
-		body: player,
-	});
+		if (!res.ok) {
+			const data = await res.json();
+			return alert(data.error || "Erro ao criar sala.");
+		}
 
-	sessionStorage.setItem("sala", roomFile);
-	sessionStorage.setItem("jogador", player);
-	sessionStorage.setItem("simbolo", "X");
-	window.location.href = "sala";
+		const data = await res.json();
+
+		sessionStorage.setItem("sala", data.room_id);
+		sessionStorage.setItem("jogador", player);
+		sessionStorage.setItem("simbolo", data.symbol);
+		window.location.href = "sala";
+	} catch (e) {
+		alert("Erro de conexão ao criar sala.");
+	}
 };
 
-window.joinRoom = async (roomFile) => {
+window.joinRoom = async (roomId) => {
 	const player = UI.playerName();
 	if (!player) return alert("Digite seu Nickname antes de entrar!");
 
-	const res = await fetch(`/api/data/${roomFile}`);
-	const gameState = await res.json();
+	try {
+		const res = await fetch(`/api/rooms/${roomId}/join`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ player }),
+		});
 
-	const symbol =
-		player === gameState.players.X
-			? "X"
-			: player === gameState.players.O || !gameState.players.O
-				? "O"
-				: null;
+		if (!res.ok) {
+			const data = await res.json();
+			return alert(data.error || "Erro ao entrar na sala.");
+		}
 
-	if (!symbol) return alert("Sala cheia!");
+		const data = await res.json();
 
-	sessionStorage.setItem("sala", roomFile);
-	sessionStorage.setItem("jogador", player);
-	sessionStorage.setItem("simbolo", symbol);
-	window.location.href = "sala";
+		sessionStorage.setItem("sala", roomId);
+		sessionStorage.setItem("jogador", player);
+		sessionStorage.setItem("simbolo", data.symbol);
+		window.location.href = "sala";
+	} catch (e) {
+		alert("Erro de conexão ao entrar na sala.");
+	}
 };
 
 document.addEventListener("DOMContentLoaded", fetchRooms);

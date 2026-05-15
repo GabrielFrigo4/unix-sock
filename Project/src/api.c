@@ -10,24 +10,378 @@
 #include <unistd.h>
 
 #include "api.h"
+#include "auth.h"
+#include "game.h"
 #include "http.h"
 
+/* ── Constantes ──────────────────────────────────────────── */
+
 constexpr char DATA_DIR[] = "./data/";
-constexpr char API_DATA_PREFIX[] = "/api/data/";
-constexpr char API_FILES_ROUTE[] = "/api/files";
-constexpr char ROUTE_EDITOR[] = "/editor";
-constexpr char ROUTE_EDITOR_HTML[] = "/editor.html";
 
-constexpr char AUTH_CREDENTIALS[] = "Basic YWRtaW46YWRtaW4=";
-constexpr char AUTH_REALM[] = "Area Restrita do Admin";
-
-constexpr char ROOM_PREFIX[] = "sala_";
-constexpr size_t ROOM_PREFIX_LEN = sizeof(ROOM_PREFIX) - 1;
+constexpr char ROUTE_ROOMS[] = "/api/rooms";
+constexpr char ROUTE_ROOMS_SLASH[] = "/api/rooms/";
+constexpr size_t ROUTE_ROOMS_SLASH_LEN = sizeof(ROUTE_ROOMS_SLASH) - 1;
+constexpr char ROUTE_AUTH_LOGIN[] = "/api/auth/login";
+constexpr char ROUTE_DATA_PREFIX[] = "/api/data/";
+constexpr size_t ROUTE_DATA_PREFIX_LEN = sizeof(ROUTE_DATA_PREFIX) - 1;
+constexpr char ROUTE_FILES[] = "/api/files";
 
 constexpr size_t PATH_BUFFER_SIZE = 1024;
 constexpr size_t RESP_BUFFER_SIZE = 8192;
-constexpr size_t AUTH_HEADER_BUFFER_SIZE = 1024;
-constexpr size_t ROOM_READ_BUFFER_SIZE = 512;
+constexpr size_t JSON_FIELD_SIZE = 128;
+
+/* ── Helpers de JSON Request Body ────────────────────────── */
+
+static bool body_extract_string(const char *body, const char *key, char *out, size_t out_size)
+{
+	if (!body)
+		return false;
+
+	char pattern[128];
+	snprintf(pattern, sizeof(pattern), "\"%s\":", key);
+
+	const char *start = strstr(body, pattern);
+	if (!start)
+		return false;
+
+	start += strlen(pattern);
+	while (*start == ' ')
+		start++;
+
+	if (*start != '"')
+		return false;
+	start++;
+
+	const char *end = strchr(start, '"');
+	if (!end)
+		return false;
+
+	size_t len = (size_t)(end - start);
+	if (len >= out_size)
+		len = out_size - 1;
+
+	memcpy(out, start, len);
+	out[len] = '\0';
+	return true;
+}
+
+static bool body_extract_int(const char *body, const char *key, long long *out)
+{
+	if (!body)
+		return false;
+
+	char pattern[128];
+	snprintf(pattern, sizeof(pattern), "\"%s\":", key);
+
+	const char *start = strstr(body, pattern);
+	if (!start)
+		return false;
+
+	start += strlen(pattern);
+	while (*start == ' ')
+		start++;
+
+	*out = strtoll(start, nullptr, 10);
+	return true;
+}
+
+/* ── Helpers de autenticação ─────────────────────────────── */
+
+static bool extract_bearer_token(const http_request_t *const req, const char **out_token)
+{
+	for (size_t i = 0; i < req->header_count; i++)
+	{
+		if (strcasecmp(req->headers[i].key, "Authorization") == 0)
+		{
+			if (strncmp(req->headers[i].value, "Bearer ", 7) == 0)
+			{
+				*out_token = req->headers[i].value + 7;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+static bool is_admin_authenticated(const http_request_t *const req)
+{
+	const char *token = nullptr;
+	if (!extract_bearer_token(req, &token))
+		return false;
+	return auth_validate_token(token);
+}
+
+static void send_json_error(
+    const int client_socket, const int status_code, const char *status_msg,
+    const char *error_msg
+)
+{
+	char body[512];
+	snprintf(body, sizeof(body), "{\"error\":\"%s\"}", error_msg);
+
+	const http_response_t res = {
+	    .status_code = status_code,
+	    .status_message = status_msg,
+	    .content_type = "application/json",
+	    .mode = RES_MODE_MEMORY,
+	    .body_len = strlen(body),
+	    .body = body
+	};
+	http_send_response(client_socket, &res);
+}
+
+static void send_json_body(const int client_socket, const char *json)
+{
+	const http_response_t res = {
+	    .status_code = HTTP_STATUS_OK,
+	    .status_message = "OK",
+	    .content_type = "application/json",
+	    .mode = RES_MODE_MEMORY,
+	    .body_len = strlen(json),
+	    .body = json
+	};
+	http_send_response(client_socket, &res);
+}
+
+/* ── Handlers: Jogo ──────────────────────────────────────── */
+
+static void handle_create_room(const int client_socket, const http_request_t *const req)
+{
+	char player_name[MAX_PLAYER_NAME] = {};
+	if (!body_extract_string(req->body, "player", player_name, sizeof(player_name)) ||
+	    player_name[0] == '\0')
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_BAD_REQUEST, "Bad Request", "Campo 'player' obrigatório."
+		);
+		return;
+	}
+
+	/* Gerar room ID */
+	const unsigned int seed = (unsigned int)time(nullptr) ^ (unsigned int)getpid();
+	srand(seed);
+
+	char room_id[ROOM_ID_SIZE];
+	constexpr char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	constexpr size_t charset_len = sizeof(charset) - 1;
+
+	for (size_t i = 0; i < ROOM_ID_SIZE - 1; i++)
+	{
+		room_id[i] = charset[(size_t)rand() % charset_len];
+	}
+	room_id[ROOM_ID_SIZE - 1] = '\0';
+
+	char room_json[GAME_JSON_BUFFER] = {};
+	const game_error_t err = game_create_room(
+	    room_id, player_name, room_json, sizeof(room_json)
+	);
+
+	if (err == GAME_ERR_MAX_ROOMS)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_TOO_MANY, "Too Many Requests", game_error_string(err)
+		);
+		return;
+	}
+
+	if (err != GAME_OK)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_CONFLICT, "Conflict", game_error_string(err)
+		);
+		return;
+	}
+
+	/* Responder com room_id + symbol + estado */
+	char response[RESP_BUFFER_SIZE];
+	snprintf(
+	    response,
+	    sizeof(response),
+	    "{\"room_id\":\"%.6s\",\"symbol\":\"X\",\"state\":%s}",
+	    room_id,
+	    room_json
+	);
+
+	send_json_body(client_socket, response);
+}
+
+static void handle_join_room(
+    const int client_socket, const http_request_t *const req, const char *room_id
+)
+{
+	char player_name[MAX_PLAYER_NAME] = {};
+	if (!body_extract_string(req->body, "player", player_name, sizeof(player_name)) ||
+	    player_name[0] == '\0')
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_BAD_REQUEST, "Bad Request", "Campo 'player' obrigatório."
+		);
+		return;
+	}
+
+	game_symbol_t symbol = SYMBOL_NONE;
+	const game_error_t err = game_join_room(room_id, player_name, &symbol);
+
+	if (err == GAME_ERR_ROOM_NOT_FOUND)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", game_error_string(err)
+		);
+		return;
+	}
+
+	if (err == GAME_ERR_ROOM_FULL)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_CONFLICT, "Conflict", game_error_string(err)
+		);
+		return;
+	}
+
+	if (err != GAME_OK)
+	{
+		send_json_error(client_socket, 500, "Internal Server Error", game_error_string(err));
+		return;
+	}
+
+	const char *symbol_str = (symbol == SYMBOL_X) ? "X" : "O";
+	char response[256];
+	snprintf(response, sizeof(response), "{\"symbol\":\"%s\"}", symbol_str);
+
+	send_json_body(client_socket, response);
+}
+
+static void handle_make_move(
+    const int client_socket, const http_request_t *const req, const char *room_id
+)
+{
+	char player_name[MAX_PLAYER_NAME] = {};
+	char symbol_str[4] = {};
+	long long cell = -1;
+
+	if (!body_extract_string(req->body, "player", player_name, sizeof(player_name)) ||
+	    !body_extract_string(req->body, "symbol", symbol_str, sizeof(symbol_str)) ||
+	    !body_extract_int(req->body, "cell", &cell))
+	{
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_BAD_REQUEST,
+		    "Bad Request",
+		    "Campos 'player', 'symbol' e 'cell' obrigatórios."
+		);
+		return;
+	}
+
+	game_symbol_t symbol = SYMBOL_NONE;
+	if (symbol_str[0] == 'X')
+		symbol = SYMBOL_X;
+	else if (symbol_str[0] == 'O')
+		symbol = SYMBOL_O;
+	else
+	{
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_BAD_REQUEST,
+		    "Bad Request",
+		    "Símbolo deve ser 'X' ou 'O'."
+		);
+		return;
+	}
+
+	if (cell < 0 || cell > 8)
+	{
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_BAD_REQUEST,
+		    "Bad Request",
+		    "Célula deve ser entre 0 e 8."
+		);
+		return;
+	}
+
+	const game_error_t err = game_make_move(room_id, player_name, symbol, (size_t)cell);
+
+	if (err == GAME_ERR_ROOM_NOT_FOUND)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", game_error_string(err)
+		);
+		return;
+	}
+
+	if (err != GAME_OK)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_CONFLICT, "Conflict", game_error_string(err)
+		);
+		return;
+	}
+
+	/* Retornar estado atualizado */
+	char state_json[GAME_JSON_BUFFER] = {};
+	const game_error_t state_err = game_get_state(room_id, state_json, sizeof(state_json));
+	(void)state_err;
+	send_json_body(client_socket, state_json);
+}
+
+static void handle_get_room(const int client_socket, const char *room_id)
+{
+	char json[GAME_JSON_BUFFER] = {};
+	const game_error_t err = game_get_state(room_id, json, sizeof(json));
+
+	if (err == GAME_ERR_ROOM_NOT_FOUND)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", game_error_string(err)
+		);
+		return;
+	}
+
+	send_json_body(client_socket, json);
+}
+
+static void handle_list_rooms(const int client_socket)
+{
+	char json[GAME_LIST_BUFFER] = {};
+	const game_error_t err = game_list_rooms(json, sizeof(json));
+	(void)err;
+	send_json_body(client_socket, json);
+}
+
+/* ── Handlers: Auth ──────────────────────────────────────── */
+
+static void handle_auth_login(const int client_socket, const http_request_t *const req)
+{
+	char username[JSON_FIELD_SIZE] = {};
+	char password[JSON_FIELD_SIZE] = {};
+
+	if (!body_extract_string(req->body, "user", username, sizeof(username)) ||
+	    !body_extract_string(req->body, "pass", password, sizeof(password)))
+	{
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_BAD_REQUEST,
+		    "Bad Request",
+		    "Campos 'user' e 'pass' obrigatórios."
+		);
+		return;
+	}
+
+	char token[AUTH_TOKEN_SIZE] = {};
+	if (!auth_login(username, password, token, sizeof(token)))
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_UNAUTHORIZED, "Unauthorized", "Credenciais inválidas."
+		);
+		return;
+	}
+
+	char response[256];
+	snprintf(response, sizeof(response), "{\"token\":\"%s\"}", token);
+	send_json_body(client_socket, response);
+}
+
+/* ── Handlers: Admin File Ops (com auth) ─────────────────── */
 
 static void ensure_data_directory(void)
 {
@@ -38,224 +392,53 @@ static void ensure_data_directory(void)
 	}
 }
 
-static bool requires_auth(const http_request_t *const req)
-{
-	if (req->method == HTTP_DELETE)
-	{
-		return true;
-	}
-
-	const bool is_editor_route = strcmp(req->path, ROUTE_EDITOR) == 0;
-	const bool is_editor_html = strcmp(req->path, ROUTE_EDITOR_HTML) == 0;
-
-	return is_editor_route || is_editor_html;
-}
-
-static bool is_authenticated(const http_request_t *const req)
-{
-	for (size_t i = 0; i < req->header_count; i++)
-	{
-		if (strcasecmp(req->headers[i].key, "Authorization") == 0)
-		{
-			return strcmp(req->headers[i].value, AUTH_CREDENTIALS) == 0;
-		}
-	}
-	return false;
-}
-
-static void send_unauthorized(const int client_socket)
-{
-	const char *const body = "Não autorizado. Credenciais incorretas ou ausentes.";
-	char header_buffer[AUTH_HEADER_BUFFER_SIZE];
-
-	snprintf(
-	    header_buffer,
-	    sizeof(header_buffer),
-	    "HTTP/1.1 401 Unauthorized\r\n"
-	    "WWW-Authenticate: Basic realm=\"%s\"\r\n"
-	    "Content-Length: %zu\r\n"
-	    "Connection: close\r\n\r\n"
-	    "%s",
-	    AUTH_REALM,
-	    strlen(body),
-	    body
-	);
-
-	send(client_socket, header_buffer, strlen(header_buffer), 0);
-}
-
-static bool is_room_finished(const char *const filepath)
-{
-	bool finished = false;
-	FILE *const f = fopen(filepath, "r");
-	if (f)
-	{
-		char buffer[ROOM_READ_BUFFER_SIZE] = {};
-		const size_t bytes_read = fread(buffer, 1, sizeof(buffer) - 1, f);
-		buffer[bytes_read] = '\0';
-		fclose(f);
-
-		if (strstr(buffer, "\"winner\":null") == nullptr)
-		{
-			finished = true;
-		}
-	}
-	return finished;
-}
-
-static void purge_expired_rooms(void)
+static void handle_admin_list_files(const int client_socket)
 {
 	DIR *const dir = opendir(DATA_DIR);
 	if (!dir)
-		return;
-
-	const time_t now = time(nullptr);
-	struct dirent *ent;
-
-	while ((ent = readdir(dir)) != nullptr)
 	{
-		if (strncmp(ent->d_name, ROOM_PREFIX, ROOM_PREFIX_LEN) != 0)
-			continue;
-
-		char filepath[PATH_BUFFER_SIZE];
-		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, ent->d_name);
-
-		struct stat st;
-		if (stat(filepath, &st) == 0 && S_ISREG(st.st_mode))
-		{
-			const bool is_expired = (now - st.st_mtime > 240);
-			const bool is_finished = is_room_finished(filepath);
-			const bool grace_period_ended = (now - st.st_mtime > 10);
-
-			if (is_expired || (is_finished && grace_period_ended))
-			{
-				remove(filepath);
-			}
-		}
-	}
-	closedir(dir);
-}
-
-static size_t get_active_room_count(void)
-{
-	DIR *const dir = opendir(DATA_DIR);
-	if (!dir)
-		return 0;
-
-	size_t count = 0;
-	struct dirent *ent;
-
-	while ((ent = readdir(dir)) != nullptr)
-	{
-		if (strncmp(ent->d_name, ROOM_PREFIX, ROOM_PREFIX_LEN) == 0)
-		{
-			char filepath[PATH_BUFFER_SIZE];
-			snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, ent->d_name);
-
-			if (!is_room_finished(filepath))
-			{
-				count++;
-			}
-		}
-	}
-	closedir(dir);
-	return count;
-}
-
-static void initialize_room_file(FILE *const f, const char *const player_name)
-{
-	const time_t now_seconds = time(nullptr);
-	const long long now_ms = (long long)now_seconds * 1000;
-
-	fprintf(
-	    f,
-	    "{\"board\":[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],"
-	    "\"turn\":\"X\","
-	    "\"players\":{\"X\":\"%.32s\",\"O\":null},"
-	    "\"winner\":null,"
-	    "\"createdAt\":%lld}",
-	    player_name,
-	    now_ms
-	);
-}
-
-static void handle_list_files(const int client_socket)
-{
-	purge_expired_rooms();
-
-	DIR *const dir = opendir(DATA_DIR);
-	if (!dir)
-	{
-		http_send_status(
+		send_json_error(
 		    client_socket, 500, "Internal Server Error", "Erro ao abrir diretório."
 		);
 		return;
 	}
 
-	char json_list[RESP_BUFFER_SIZE] = "[";
-	size_t offset = 1;
-	struct dirent *ent;
+	char json_list[RESP_BUFFER_SIZE] = {};
+	size_t offset = 0;
+	offset += (size_t)snprintf(json_list, sizeof(json_list), "[");
 
+	struct dirent *ent;
 	while ((ent = readdir(dir)) != nullptr)
 	{
 		if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-		{
 			continue;
-		}
 
 		char filepath[PATH_BUFFER_SIZE];
 		snprintf(filepath, sizeof(filepath), "%s%s", DATA_DIR, ent->d_name);
 
 		struct stat st;
-		if (stat(filepath, &st) == 0 && S_ISREG(st.st_mode))
-		{
-			if (strncmp(ent->d_name, ROOM_PREFIX, ROOM_PREFIX_LEN) == 0)
-			{
-				if (is_room_finished(filepath))
-				{
-					continue;
-				}
-			}
+		if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode))
+			continue;
 
-			const char *const separator = (offset > 1) ? "," : "";
-			const int written = snprintf(
-			    json_list + offset,
-			    sizeof(json_list) - offset,
-			    "%s\"%s\"",
-			    separator,
-			    ent->d_name
-			);
-			if (written < 0 || (size_t)written >= (sizeof(json_list) - offset))
-			{
-				break;
-			}
-			offset += (size_t)written;
-		}
+		const char *separator = (offset > 1) ? "," : "";
+		const int written = snprintf(
+		    json_list + offset, sizeof(json_list) - offset, "%s\"%s\"", separator, ent->d_name
+		);
+		if (written < 0 || (size_t)written >= (sizeof(json_list) - offset))
+			break;
+		offset += (size_t)written;
 	}
 	closedir(dir);
 
-	if ((sizeof(json_list) - offset) > 1)
-	{
-		snprintf(json_list + offset, sizeof(json_list) - offset, "]");
-	}
-
-	const http_response_t res = {
-	    .status_code = HTTP_STATUS_OK,
-	    .status_message = "OK",
-	    .content_type = "application/json",
-	    .mode = RES_MODE_MEMORY,
-	    .body_len = strlen(json_list),
-	    .body = json_list
-	};
-	http_send_response(client_socket, &res);
+	snprintf(json_list + offset, sizeof(json_list) - offset, "]");
+	send_json_body(client_socket, json_list);
 }
 
-static void handle_file_read(const int client_socket, const http_request_t *const req)
+static void handle_admin_file_read(const int client_socket, const char *filename)
 {
-	const char *const filename = req->path + strlen(API_DATA_PREFIX);
 	if (strchr(filename, '/') != nullptr)
 	{
-		http_send_status(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
+		send_json_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
 		return;
 	}
 
@@ -265,7 +448,7 @@ static void handle_file_read(const int client_socket, const http_request_t *cons
 	struct stat st;
 	if (stat(filepath, &st) == -1)
 	{
-		http_send_status(
+		send_json_error(
 		    client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Arquivo inexistente."
 		);
 		return;
@@ -281,40 +464,15 @@ static void handle_file_read(const int client_socket, const http_request_t *cons
 	http_send_response(client_socket, &res);
 }
 
-static void handle_file_write(
-    const int client_socket, const http_request_t *const req, const char *const mode,
-    const char *const success_msg
+static void handle_admin_file_write(
+    const int client_socket, const http_request_t *const req, const char *filename,
+    const char *mode
 )
 {
-	const char *const filename = req->path + strlen(API_DATA_PREFIX);
 	if (strchr(filename, '/') != nullptr)
 	{
-		http_send_status(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
+		send_json_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
 		return;
-	}
-
-	const bool is_post = req->method == HTTP_POST;
-	const bool is_room = strncmp(filename, ROOM_PREFIX, ROOM_PREFIX_LEN) == 0;
-	const bool is_room_creation = is_post && is_room;
-
-	if (is_room && req->body_len >= ROOM_READ_BUFFER_SIZE)
-	{
-		http_send_status(
-		    client_socket, 413, "Payload Too Large", "Estado da sala excedeu o limite seguro."
-		);
-		return;
-	}
-
-	if (is_room_creation)
-	{
-		purge_expired_rooms();
-		if (get_active_room_count() >= 5)
-		{
-			http_send_status(
-			    client_socket, 429, "Too Many Requests", "Limite de 5 salas atingido."
-			);
-			return;
-		}
 	}
 
 	char filepath[PATH_BUFFER_SIZE];
@@ -323,38 +481,24 @@ static void handle_file_write(
 	FILE *const f = fopen(filepath, mode);
 	if (!f)
 	{
-		http_send_status(client_socket, 500, "Internal Server Error", "Erro ao abrir arquivo.");
+		send_json_error(client_socket, 500, "Internal Server Error", "Erro ao abrir arquivo.");
 		return;
 	}
 
-	if (is_room_creation)
-	{
-		initialize_room_file(f, (req->body ? req->body : "Anônimo"));
-	}
-	else if (req->body && req->body_len > 0)
+	if (req->body && req->body_len > 0)
 	{
 		fwrite(req->body, 1, req->body_len, f);
 	}
-
 	fclose(f);
 
-	const http_response_t res = {
-	    .status_code = HTTP_STATUS_OK,
-	    .status_message = "OK",
-	    .content_type = "application/json",
-	    .mode = RES_MODE_MEMORY,
-	    .body_len = strlen(success_msg),
-	    .body = success_msg
-	};
-	http_send_response(client_socket, &res);
+	send_json_body(client_socket, "{\"ok\":true}");
 }
 
-static void handle_file_delete(const int client_socket, const http_request_t *const req)
+static void handle_admin_file_delete(const int client_socket, const char *filename)
 {
-	const char *const filename = req->path + strlen(API_DATA_PREFIX);
 	if (strchr(filename, '/') != nullptr)
 	{
-		http_send_status(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
+		send_json_error(client_socket, HTTP_STATUS_FORBIDDEN, "Forbidden", "Acesso negado.");
 		return;
 	}
 
@@ -363,66 +507,180 @@ static void handle_file_delete(const int client_socket, const http_request_t *co
 
 	if (remove(filepath) == 0)
 	{
-		http_send_status(client_socket, HTTP_STATUS_OK, "OK", "Removido com sucesso.");
+		send_json_body(client_socket, "{\"ok\":true}");
 	}
 	else
 	{
-		http_send_status(client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Erro ao remover.");
+		send_json_error(client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Erro ao remover.");
 	}
+}
+
+/* ── Router de rotas /api/rooms/{id}/... ─────────────────── */
+
+static bool route_room_sub(
+    const int client_socket, const http_request_t *const req, const char *path_after_rooms
+)
+{
+	/* Extrair room_id: tudo até próximo '/' ou fim */
+	const char *slash = strchr(path_after_rooms, '/');
+
+	char room_id[ROOM_ID_SIZE] = {};
+	size_t id_len;
+
+	if (slash)
+	{
+		id_len = (size_t)(slash - path_after_rooms);
+	}
+	else
+	{
+		id_len = strlen(path_after_rooms);
+	}
+
+	if (id_len == 0 || id_len >= ROOM_ID_SIZE)
+	{
+		send_json_error(
+		    client_socket, HTTP_STATUS_BAD_REQUEST, "Bad Request", "Room ID inválido."
+		);
+		return true;
+	}
+
+	memcpy(room_id, path_after_rooms, id_len);
+	room_id[id_len] = '\0';
+
+	if (!slash)
+	{
+		/* GET /api/rooms/{id} */
+		if (req->method == HTTP_GET)
+		{
+			handle_get_room(client_socket, room_id);
+			return true;
+		}
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_NOT_ALLOWED,
+		    "Method Not Allowed",
+		    "Método não permitido."
+		);
+		return true;
+	}
+
+	const char *action = slash + 1;
+
+	if (strcmp(action, "join") == 0 && req->method == HTTP_POST)
+	{
+		handle_join_room(client_socket, req, room_id);
+		return true;
+	}
+
+	if (strcmp(action, "move") == 0 && req->method == HTTP_POST)
+	{
+		handle_make_move(client_socket, req, room_id);
+		return true;
+	}
+
+	send_json_error(client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota inexistente.");
+	return true;
+}
+
+/* ── Entry Point ─────────────────────────────────────────── */
+
+void api_init(void)
+{
+	ensure_data_directory();
+	game_ensure_data_dir();
+	auth_init();
 }
 
 bool api_handle_request(const int client_socket, http_request_t *const req)
 {
-	static bool initialized = false;
-	if (!initialized)
-	{
-		ensure_data_directory();
-		initialized = true;
-	}
-
-	if (requires_auth(req) && !is_authenticated(req))
-	{
-		send_unauthorized(client_socket);
-		return true;
-	}
-
 	if (strncmp(req->path, "/api/", 5) != 0)
 	{
 		return false;
 	}
 
-	if (strcmp(req->path, API_FILES_ROUTE) == 0 && req->method == HTTP_GET)
+	/* ── Rotas públicas do jogo ─────────────────────────── */
+
+	/* POST /api/rooms → criar sala */
+	if (strcmp(req->path, ROUTE_ROOMS) == 0 && req->method == HTTP_POST)
 	{
-		handle_list_files(client_socket);
+		handle_create_room(client_socket, req);
 		return true;
 	}
 
-	if (strncmp(req->path, API_DATA_PREFIX, strlen(API_DATA_PREFIX)) == 0)
+	/* GET /api/rooms → listar salas */
+	if (strcmp(req->path, ROUTE_ROOMS) == 0 && req->method == HTTP_GET)
 	{
+		handle_list_rooms(client_socket);
+		return true;
+	}
+
+	/* /api/rooms/{id}... */
+	if (strncmp(req->path, ROUTE_ROOMS_SLASH, ROUTE_ROOMS_SLASH_LEN) == 0)
+	{
+		return route_room_sub(client_socket, req, req->path + ROUTE_ROOMS_SLASH_LEN);
+	}
+
+	/* ── Rota de login ──────────────────────────────────── */
+
+	if (strcmp(req->path, ROUTE_AUTH_LOGIN) == 0 && req->method == HTTP_POST)
+	{
+		handle_auth_login(client_socket, req);
+		return true;
+	}
+
+	/* ── Rotas admin (requerem Bearer Token) ────────────── */
+
+	const bool is_admin_route = strcmp(req->path, ROUTE_FILES) == 0 ||
+	                            strncmp(req->path, ROUTE_DATA_PREFIX, ROUTE_DATA_PREFIX_LEN) ==
+	                                0;
+
+	if (is_admin_route && !is_admin_authenticated(req))
+	{
+		send_json_error(
+		    client_socket,
+		    HTTP_STATUS_UNAUTHORIZED,
+		    "Unauthorized",
+		    "Token de acesso inválido ou ausente."
+		);
+		return true;
+	}
+
+	if (strcmp(req->path, ROUTE_FILES) == 0 && req->method == HTTP_GET)
+	{
+		handle_admin_list_files(client_socket);
+		return true;
+	}
+
+	if (strncmp(req->path, ROUTE_DATA_PREFIX, ROUTE_DATA_PREFIX_LEN) == 0)
+	{
+		const char *filename = req->path + ROUTE_DATA_PREFIX_LEN;
+
 		switch (req->method)
 		{
 		case HTTP_GET:
-			handle_file_read(client_socket, req);
+			handle_admin_file_read(client_socket, filename);
 			break;
 		case HTTP_POST:
-			handle_file_write(client_socket, req, "w", "Criado com sucesso.");
+			handle_admin_file_write(client_socket, req, filename, "w");
 			break;
 		case HTTP_PUT:
-			handle_file_write(client_socket, req, "w", "Atualizado com sucesso.");
-			break;
-		case HTTP_PATCH:
-			handle_file_write(client_socket, req, "a", "Modificado com sucesso.");
+			handle_admin_file_write(client_socket, req, filename, "w");
 			break;
 		case HTTP_DELETE:
-			handle_file_delete(client_socket, req);
+			handle_admin_file_delete(client_socket, filename);
 			break;
 		default:
-			http_send_status(client_socket, 405, "Method Not Allowed", "Método não permitido.");
+			send_json_error(
+			    client_socket,
+			    HTTP_STATUS_NOT_ALLOWED,
+			    "Method Not Allowed",
+			    "Método não permitido."
+			);
 			break;
 		}
 		return true;
 	}
 
-	http_send_status(client_socket, 404, "Not Found", "Rota inexistente.");
+	send_json_error(client_socket, HTTP_STATUS_NOT_FOUND, "Not Found", "Rota inexistente.");
 	return true;
 }

@@ -2,12 +2,47 @@
 <html lang="pt-br">
 	<head>
 		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="author" content="Gabriel Frigo" />
 		<title>Gerenciador de Arquivos C</title>
+
+		<!-- Open Graph Meta Tags -->
+		<meta property="og:title" content="Gerenciador de Arquivos C - Admin" />
+		<meta property="og:description" content="Painel de administração." />
+		<meta property="og:image" content="https://game.gabriefrigo.dev.br/img/editor.png" />
+		<meta property="og:type" content="website" />
+		<meta property="og:locale" content="pt_BR" />
 		<link rel="icon" type="imagem/png" href="img/editor.png" />
 		<link rel="stylesheet" href="css/editor.css" />
 	</head>
 
 	<body>
+		<div id="loginOverlay" class="login-overlay">
+			<div class="login-card">
+				<img
+					src="img/editor.png"
+					alt="Admin"
+					style="width: 48px; height: 48px; margin-bottom: 10px"
+				/>
+				<h2>🔐 Painel Administrativo</h2>
+				<p class="login-subtitle">Autentique-se para continuar</p>
+				<input
+					type="text"
+					id="adminUser"
+					placeholder="Usuário"
+					autocomplete="username"
+				/>
+				<input
+					type="password"
+					id="adminPass"
+					placeholder="Senha"
+					autocomplete="current-password"
+				/>
+				<button id="btnLogin">Entrar</button>
+				<div id="loginError" class="login-error"></div>
+			</div>
+		</div>
+
 		<div class="app-layout">
 			<aside class="sidebar">
 				<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px">

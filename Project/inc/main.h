@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-constexpr uint16_t PORT = 80;
+/* ── Configuração de Rede ────────────────────────────────── */
+
+constexpr uint16_t PORT = 443 * 80 + 1;
 
 #endif

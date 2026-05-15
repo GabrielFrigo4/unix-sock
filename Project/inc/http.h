@@ -4,12 +4,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* ── Códigos de Status HTTP ──────────────────────────────── */
+
 constexpr int HTTP_STATUS_OK = 200;
+constexpr int HTTP_STATUS_BAD_REQUEST = 400;
 constexpr int HTTP_STATUS_UNAUTHORIZED = 401;
 constexpr int HTTP_STATUS_FORBIDDEN = 403;
 constexpr int HTTP_STATUS_NOT_FOUND = 404;
 constexpr int HTTP_STATUS_NOT_ALLOWED = 405;
+constexpr int HTTP_STATUS_CONFLICT = 409;
 constexpr int HTTP_STATUS_URI_TOO_LONG = 414;
+constexpr int HTTP_STATUS_TOO_MANY = 429;
+
+/* ── Configurações e Limites ─────────────────────────────── */
 
 constexpr size_t MAX_HTTP_HEADERS = 32;
 
@@ -46,6 +53,8 @@ typedef enum response_mode
 	RES_MODE_FILE
 } response_mode_t;
 
+/* ── Estruturas de Protocolo ─────────────────────────────── */
+
 typedef struct http_response
 {
 	int status_code;
@@ -54,8 +63,7 @@ typedef struct http_response
 	size_t header_count;
 	http_header_t headers[MAX_HTTP_HEADERS];
 	response_mode_t mode;
-	union
-	{
+	union {
 		struct
 		{
 			size_t body_len;
@@ -64,6 +72,8 @@ typedef struct http_response
 		const char *file_path;
 	};
 } http_response_t;
+
+/* ── Interface do Servidor HTTP ──────────────────────────── */
 
 void http_send_response(const int client_socket, const http_response_t *const res);
 void http_send_status(

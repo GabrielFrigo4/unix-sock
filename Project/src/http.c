@@ -11,6 +11,8 @@
 #include "api.h"
 #include "http.h"
 
+/* ── Definições e Constantes ─────────────────────────────── */
+
 constexpr char STATIC_DIR[] = "./web/";
 constexpr size_t RECV_BUFFER_SIZE = 8192;
 constexpr size_t PATH_BUFFER_SIZE = 1024;
@@ -20,6 +22,8 @@ constexpr size_t MAX_PAYLOAD_SIZE = 1 << 22;
 
 constexpr size_t URI_SAFETY_MARGIN = 256;
 constexpr size_t MAX_SAFE_URI_LEN = PATH_BUFFER_SIZE - URI_SAFETY_MARGIN;
+
+/* ── Helpers internos ────────────────────────────────────── */
 
 static void ensure_static_directory(void)
 {
@@ -64,6 +68,8 @@ static const char *get_mime_type(const char *const path)
 
 	return "application/octet-stream";
 }
+
+/* ── Parsing de Request ──────────────────────────────────── */
 
 static http_method_t parse_method(const char *const method_str)
 {
@@ -169,6 +175,8 @@ static void parse_http_request(char *const buffer, http_request_t *const req)
 	parse_request_line(first_line, req);
 	parse_headers(req, &saveptr);
 }
+
+/* ── Respostas HTTP ──────────────────────────────────────── */
 
 static void send_file_content(const int client_socket, FILE *const file)
 {
@@ -304,6 +312,8 @@ void http_send_status(
 	http_send_response(client_socket, &res);
 }
 
+/* ── Lógica de Roteamento ────────────────────────────────── */
+
 static void serve_static_file(const int client_socket, const http_request_t *const req)
 {
 	char target_file[PATH_BUFFER_SIZE];
@@ -347,6 +357,8 @@ static void configure_socket_timeout(const int client_socket, const time_t secon
 	const struct timeval tv = {.tv_sec = seconds, .tv_usec = 0};
 	setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 }
+
+/* ── I/O de Sockets ──────────────────────────────────────── */
 
 static bool read_http_headers(
     const int client_socket, char *const buffer, const size_t buffer_size,
@@ -481,6 +493,8 @@ static bool should_keep_alive(const http_request_t *const req)
 	}
 	return true;
 }
+
+/* ── Interface Pública ───────────────────────────────────── */
 
 void http_handle_client(const int client_socket)
 {

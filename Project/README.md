@@ -1,16 +1,16 @@
 # 💻 **Implementação: Servidor HTTP/1.1 RESTful em C (POSIX / FreeBSD & Linux)**
 
-## TO-DO List Versão 1
+## 📋 TO-DO List Versão 1
 
-- [ ] Refatorar levemente o código C
-- [ ] Corrigir sincronia do Timer e expulsão de salas
-- [ ] Acoplar regras do jogo no `api.c` (Backend Autoritário)
-- [ ] Blindar endpoints e auditar acessos à API
-- [ ] Configurar certificado TLS/HTTPS
-- [ ] Fazer o Deploy na Oracle Cloud
-- [ ] Configurar domínio customizado (Registro.br)
+- [x] Refatorar levemente o código C
+- [x] Corrigir sincronia do Timer e expulsão de salas
+- [x] Acoplar regras do jogo no `api.c` (Backend Autoritário)
+- [x] Blindar endpoints e auditar acessos à API
+- [x] Configurar certificado TLS/HTTPS (Caddy)
+- [x] Fazer o Deploy na Oracle Cloud
+- [x] Configurar domínio customizado (Registro.br)
 
-## TO-DO List Versão 2 (Arquitetura Assíncrona)
+## 📋 TO-DO List Versão 2 (Arquitetura Assíncrona)
 
 - [ ] Substituir `fork()` por Sockets Não-Bloqueantes (`fcntl`)
 - [ ] Implementar Event Loop em O(1) (`epoll`/`kqueue`)
@@ -76,6 +76,40 @@ sequenceDiagram
 | **DELETE** | Syscall `remove()`               | Exclusão definitiva de recursos via manipulação direta de inodes.             |
 
 > ⚙️ **Nota de Persistência:** A tradução direta dos verbos HTTP para modos específicos de I/O (como `w` para **PUT** e `a` para **PATCH**) transforma o sistema de arquivos em um motor de persistência _document-oriented_ minimalista. Isso elimina a necessidade de camadas de abstração (ORMs) e garante latência próxima de zero no acesso aos dados.
+
+### 🎮 **Referência de Endpoints da API**
+
+#### Endpoints Públicos — Jogo da Velha
+
+| Método | Rota                   | Body (JSON)                                    | Resposta (JSON)                              |
+| :----- | :--------------------- | :--------------------------------------------- | :------------------------------------------- |
+| `GET`  | `/api/rooms`           | —                                              | `[{id, player_x, player_o}, ...]`            |
+| `POST` | `/api/rooms`           | `{"player": "Nome"}`                           | `{"room_id", "symbol": "X", "state": {...}}` |
+| `GET`  | `/api/rooms/{id}`      | —                                              | Estado completo da sala                      |
+| `POST` | `/api/rooms/{id}/join` | `{"player": "Nome"}`                           | `{"symbol": "X"` ou `"O"}`                   |
+| `POST` | `/api/rooms/{id}/move` | `{"player": "Nome", "symbol": "X", "cell": 0}` | Estado atualizado da sala                    |
+
+> ⚠️ Todas as jogadas são **validadas server-side**: turno, célula, vínculo jogador↔símbolo. Qualquer tentativa de manipulação via `curl` é rejeitada com `409 Conflict`.
+
+#### Endpoint de Autenticação
+
+| Método | Rota              | Body (JSON)                        | Resposta (JSON)         |
+| :----- | :---------------- | :--------------------------------- | :---------------------- |
+| `POST` | `/api/auth/login` | `{"user": "admin", "pass": "..."}` | `{"token": "<bearer>"}` |
+
+> 🔐 O token gerado usa **HMAC-SHA256** com um _server secret_ aleatório gerado em cada boot. TTL de **1 hora**. Credenciais configuráveis via variáveis de ambiente `ADMIN_USER` e `ADMIN_PASS`.
+
+#### Endpoints Administrativos — Requerem `Authorization: Bearer <token>` 🔒
+
+| Método   | Rota               | Descrição                          |
+| :------- | :----------------- | :--------------------------------- |
+| `GET`    | `/api/files`       | Lista todos os arquivos em `data/` |
+| `GET`    | `/api/data/{file}` | Lê o conteúdo de um arquivo        |
+| `POST`   | `/api/data/{file}` | Cria um novo arquivo               |
+| `PUT`    | `/api/data/{file}` | Sobrescreve um arquivo existente   |
+| `DELETE` | `/api/data/{file}` | Remove um arquivo                  |
+
+> ℹ️ Arquivos com prefixo `sala_` e sufixo `.json` são tratados como salas de jogo. Arquivos inválidos nesse formato são removidos automaticamente pelo _garbage collector_ de salas expiradas.
 
 ## 🗂️ **Gestão de Estado e Isolamento de Contexto**
 

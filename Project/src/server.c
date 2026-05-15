@@ -8,6 +8,8 @@
 
 #include "server.h"
 
+/* ── Logging e Debug ─────────────────────────────────────── */
+
 static void log_server_addresses(const uint16_t port, const ip_mode_t mode)
 {
 	struct ifaddrs *interfaces;
@@ -65,6 +67,8 @@ static void log_server_addresses(const uint16_t port, const ip_mode_t mode)
 	interfaces = nullptr;
 	printf("\n[INFO]: Pressione Ctrl+C para encerrar o servidor.\n\n");
 }
+
+/* ── Inicialização de Sockets ────────────────────────────── */
 
 static int server_init_ipv4(const uint16_t port)
 {
@@ -146,6 +150,8 @@ static int create_server_socket(const uint16_t port, const ip_mode_t mode)
 		return -1;
 	}
 }
+
+/* ── Interface Pública ───────────────────────────────────── */
 
 int server_init(const uint16_t port, const ip_mode_t mode)
 {
