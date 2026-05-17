@@ -246,7 +246,7 @@ path_back() {
 }
 
 path_front "${HOME}/.local/bin"
-export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$0]++' | sed 's/:$//')
+export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$(0)]++' | sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
@@ -398,7 +398,7 @@ path_back() {
 }
 
 path_front "${HOME}/.local/bin"
-export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$0]++' | sed 's/:$//')
+export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$(0)]++' | sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
@@ -542,7 +542,7 @@ path_back() {
 }
 
 path_front "${HOME}/.local/bin"
-export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$0]++' | sed 's/:$//')
+export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$(0)]++' | sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
