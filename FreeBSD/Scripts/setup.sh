@@ -149,11 +149,12 @@ sudo pkg install --yes curl
 ### Setup Git
 ### ################################
 
-# GIT
+# GIT ECOSYSTEM
 sudo pkg install --yes git
 sudo pkg install --yes git-credential-oauth
+sudo pkg install --yes gh
 
-# SETUP
+# GIT CONFIG
 rm "${HOME}/.gitconfig"
 git config --global credential.helper "!gh auth git-credential"
 git config --global user.email "gabriel.frigo4@gmail.com"
@@ -162,8 +163,7 @@ git config --global init.defaultBranch "main"
 git config --global pull.rebase false
 git config --global color.ui auto
 
-# GITHUB
-sudo pkg install --yes gh
+# GITHUB CONFIG
 gh auth login
 gh auth setup-git
 
