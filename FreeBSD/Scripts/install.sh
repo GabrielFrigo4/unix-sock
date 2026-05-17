@@ -9,7 +9,7 @@ sudo mv "FreeBSD.iso" "/var/lib/libvirt/images/"
 # Install VM
 virt-install \
   --connect qemu:///system \
-  --name="FreeBSD-15.0" \
+  --name="FreeBSD" \
   --os-variant="freebsd15.0" \
   --vcpus=4 \
   --memory=8192 \

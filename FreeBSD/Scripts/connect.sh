@@ -4,10 +4,10 @@
 set -e
 
 # Start FreeBSD (Daemon)
-virsh --connect "qemu:///system" start FreeBSD-15.0
+virsh --connect "qemu:///system" start FreeBSD
 
 # Open VM Window
-virt-viewer --connect "qemu:///system" FreeBSD-15.0
+virt-viewer --connect "qemu:///system" FreeBSD
 
 # List VMs IPs
 virsh --connect "qemu:///system" net-dhcp-leases default
