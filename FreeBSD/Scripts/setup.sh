@@ -206,18 +206,28 @@ cat << 'EOF' | tee "${SHELL_BLOCK}" > "/dev/null"
 ### TERMINAL ENVIRONMENT
 ### ################################
 
+case "$(command ps -o comm= -p $PPID)" in
+	su|-su) unset SHELL_INIT ;;
+esac
+
+if [ "${USER}" != "$(command id -un)" ]; then
+	export USER="$(command id -un)"
+	unset SHELL_INIT
+fi
+
 if [ -z "${SHELL_INIT}" ]; then
-	if [ -z "${KGX_SHELL}" ]; then
-		KGX_SHELL="$(which zsh)"
+	if [ -z "${SHELL_TARGET}" ]; then
+		SHELL_TARGET="$(which zsh)"
 	fi
 
-	if [ -x "${KGX_SHELL}" ]; then
-		export SHELL="${KGX_SHELL}"
-		unset SHELL_INIT KGX_SHELL
-		printf "\033[H\033[2J\033[3J"
+	if [ -x "${SHELL_TARGET}" ]; then
+		export SHELL_INIT=1
+		export SHELL="${SHELL_TARGET}"
+		unset SHELL_TARGET
+		command printf "\033[H\033[2J\033[3J"
 		exec "${SHELL}"
 	else
-		unset SHELL_INIT KGX_SHELL
+		unset SHELL_TARGET
 	fi
 fi
 
@@ -256,7 +266,7 @@ path_back() {
 }
 
 path_front "${HOME}/.local/bin"
-export PATH=$(printf "%s" "${PATH}" | awk -v RS=: -v ORS=: '!a[$(0)]++' | sed 's/:$//')
+export PATH=$(command printf "%s" "${PATH}" | command awk -v RS=: -v ORS=: '!a[$(0)]++' | command sed 's/:$//')
 
 ### ################################
 ### SHELL APPEARANCE
@@ -291,7 +301,7 @@ update_prompt() {
 	local u
 	if [ "$(command id -u)" -eq 0 ]; then u="${R}"; else u="${G}"; fi
 
-	local cur_user="${USER:-$(command id -un)}"
+	local cur_user="$(command id -un)"
 	local cur_host="$(command hostname -s)"
 	local cur_dir="${PWD##*/}"
 	[ "${PWD}" = "${HOME}" ] && cur_dir="~"
@@ -327,6 +337,7 @@ TRIGGERS_NATIVE="$TRIGGERS_NATIVE make cc c++ clang clang++"
 TRIGGERS_NATIVE="$TRIGGERS_NATIVE as ld objdump readelf"
 TRIGGERS_NATIVE="$TRIGGERS_NATIVE tar gzip bzip2 xz zstd"
 TRIGGERS_NATIVE="$TRIGGERS_NATIVE fetch ssh scp sftp"
+TRIGGERS_NATIVE="$TRIGGERS_NATIVE pkg"
 
 TRIGGERS_EXTERN="sudo doas"
 TRIGGERS_EXTERN="$TRIGGERS_EXTERN git gh"
@@ -366,9 +377,9 @@ done
 ### ################################
 
 # Commands ALIAS
-alias clear='printf "\033[H\033[2J\033[3J"'
+alias clear='command printf "\033[H\033[2J\033[3J"'
 # Packages ALIAS
-alias uppkg='sudo pkg update && sudo pkg upgrade --yes'
+alias uppkg='command sudo pkg update && command sudo pkg upgrade --yes'
 alias upall='uppkg'
 
 ### ################################
