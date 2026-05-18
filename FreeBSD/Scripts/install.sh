@@ -16,10 +16,11 @@ virt-install \
   --os-variant="${FREEBSD_VER}" \
   --vcpus=4 \
   --memory=8192 \
-  --disk size=32,format=qcow2 \
-  --network network=default \
+  --disk size=32,format=qcow2,bus=virtio \
+  --network network=default,model=virtio \
   --video qxl \
   --channel spicevmc \
+  --channel unix,target_type=virtio,name=org.qemu.guest_agent.0 \
   --boot uefi \
   --cdrom="/var/lib/libvirt/images/FreeBSD.iso"
 

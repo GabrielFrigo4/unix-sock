@@ -46,6 +46,7 @@ sysrc vmware_guestd_enable="YES"
 pkg install --yes xf86-video-qxl
 pkg install --yes qemu-guest-agent
 sysrc qemu_guest_agent_enable="YES"
+sysrc qemu_guest_agent_flags="-d -m virtio-serial -p /dev/ttyV0.1"
 sysrc spice_vdagentd_enable="YES"
 service qemu-guest-agent start
 
