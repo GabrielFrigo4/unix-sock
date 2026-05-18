@@ -139,6 +139,14 @@ create_launcher 3   "Launch Emacs"          "emacs"                 "<Control><A
 ### ################################################################################################################################
 
 ### ################################
+### Setup Shell
+### ################################
+
+# SHELL
+sudo pkg install --yes bash
+sudo pkg install --yes zsh
+
+### ################################
 ### Setup Wget
 ### ################################
 
@@ -184,7 +192,7 @@ cd ~
 ### ################################################################################################################################
 
 ### ################################
-### Setup Shell
+### Config Shell
 ### ################################
 
 # Default Shell
@@ -369,11 +377,8 @@ alias upall='uppkg'
 EOF
 
 ### ################################
-### Setup Bash
+### Config Bash
 ### ################################
-
-# Install Bash
-sudo pkg install --yes bash
 
 # Config Bash
 cat << 'EOF' | tee -a "${HOME}/.bashrc" | sudo tee -a "/root/.bashrc" > "/dev/null"
@@ -477,11 +482,10 @@ alias upall='uppkg'
 EOF
 
 ### ################################
-### Setup Zsh
+### Config Zsh
 ### ################################
 
-# Install Zsh
-sudo pkg install --yes zsh
+# Install Oh My Zsh
 curl -fsSL "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh" | sh -s -- --unattended
 curl -fsSL "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh" | sudo sh -s -- --unattended
 
