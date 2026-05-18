@@ -9,8 +9,14 @@ virsh --connect "qemu:///system" start FreeBSD
 # Open VM Window
 virt-viewer --connect "qemu:///system" FreeBSD
 
+# Open VM Console
+virsh --connect "qemu:///system" console FreeBSD
+
 # List VMs IPs
 virsh --connect "qemu:///system" net-dhcp-leases default
 
-# Open SSH
-ssh "gabriel@$(virsh --connect "qemu:///system" net-dhcp-leases default | grep "vmbsd" | awk '{print $(5)}' | cut -d'/' -f1)"
+# List VM IPs
+virsh --connect "qemu:///system" domifaddr FreeBSD   
+
+# Open VM SSH
+ssh "gabriel@$(virsh --connect "qemu:///system" net-dhcp-leases default | grep "freebsd" | awk '{print $(5)}' | cut -d'/' -f1)"
