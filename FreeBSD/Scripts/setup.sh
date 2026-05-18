@@ -187,7 +187,16 @@ sudo git clone "https://git.FreeBSD.org/ports.git" "/usr/ports"
 # UPDATE
 cd "/usr/ports"
 sudo git pull
-cd ~
+cd "${HOME}"
+
+### ################################
+### Setup Jails
+### ################################
+
+# BASTILLE BSD
+sudo pkg install --yes bastille
+sudo sysrc bastille_enable="YES"
+sudo service bastille start
 
 ### ################################################################################################################################
 
