@@ -16,7 +16,7 @@ virsh --connect "qemu:///system" console FreeBSD
 virsh --connect "qemu:///system" net-dhcp-leases default
 
 # List VM IPs
-virsh --connect "qemu:///system" domifaddr FreeBSD   
+virsh --connect "qemu:///system" domifaddr FreeBSD
 
 # Open VM SSH
-ssh "gabriel@$(virsh --connect "qemu:///system" net-dhcp-leases default | grep "freebsd" | awk '{print $(5)}' | cut -d'/' -f1)"
+ssh "gabriel@$(virsh --connect "qemu:///system" domifaddr FreeBSD | awk '$(3) == "ipv4" {print $(4)}' | cut -d'/' -f1)"
