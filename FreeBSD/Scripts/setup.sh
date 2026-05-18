@@ -196,7 +196,7 @@ cd "${HOME}"
 # JAILS
 sudo sysrc jail_enable="YES"
 
-# BASTILLE BSD
+# BASTILLE
 sudo pkg install --yes bastille
 sudo sysrc bastille_enable="YES"
 sudo service bastille start
