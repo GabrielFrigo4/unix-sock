@@ -9,6 +9,7 @@ Scripts desenvolvidos em **sh** (Shell padrão do FreeBSD) para automatizar a pr
 | **[`download.sh`](./download.sh)**   | 🏠 _Host_         | Baixa a ISO mais recente do FreeBSD 15, verifica o Checksum (SHA256) e extrai o arquivo `.xz`. |
 | **[`install.sh`](./install.sh)**     | 🏠 _Host_         | Cria a VM no KVM via `virt-install` (4 vCPUs, 8GB RAM, 32GB Disk, UEFI).                       |
 | **[`connect.sh`](./connect.sh)**     | 🏠 _Host_         | Inicia a VM, abre o console gráfico e tenta conexão automática via SSH.                        |
+| **[`reboot.sh`](./reboot.sh)**       | 🏠 _Host_         | Reinicia a VM, fecha e abre o Daemon da VM                                                     |
 | **[`setup.sh`](./setup.sh)**         | 📟 _Guest (VM)_   | **O coração do setup.** Configura drivers, Desktop (GNOME), Editores, Shell e Ferramentas.     |
 | **[`uninstall.sh`](./uninstall.sh)** | 🏠 _Host_         | Remove completamente a VM e seus discos do sistema.                                            |
 
@@ -26,6 +27,7 @@ chmod +x *.sh
 ./downlaod.sh
 ./install.sh
 ./connect.sh
+./reboot.sh
 ./setup.sh
 ./uninstall.sh
 ```
