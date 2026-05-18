@@ -193,6 +193,9 @@ cd "${HOME}"
 ### Setup Jails
 ### ################################
 
+# JAILS
+sysrc jail_enable="YES"
+
 # BASTILLE BSD
 sudo pkg install --yes bastille
 sudo sysrc bastille_enable="YES"
