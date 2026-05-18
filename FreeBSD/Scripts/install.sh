@@ -15,7 +15,7 @@ virt-install \
   --name="FreeBSD" \
   --os-variant="${FREEBSD_VER}" \
   --vcpus=4 \
-  --memory=8192 \
+  --memory=4096 \
   --disk size=32,format=qcow2,bus=virtio \
   --network network=default,model=virtio \
   --video qxl \
