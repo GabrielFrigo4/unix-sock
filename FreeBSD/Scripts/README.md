@@ -4,14 +4,14 @@
 
 Scripts desenvolvidos em **sh** (Shell padrão do FreeBSD) para automatizar a preparação do ambiente de desenvolvimento.
 
-| Script                               | Local de Execução | Descrição                                                                                      |
-| ------------------------------------ | ----------------- | ---------------------------------------------------------------------------------------------- |
-| **[`download.sh`](./download.sh)**   | 🏠 _Host_         | Baixa a ISO mais recente do FreeBSD 15, verifica o Checksum (SHA256) e extrai o arquivo `.xz`. |
-| **[`install.sh`](./install.sh)**     | 🏠 _Host_         | Cria a VM no KVM via `virt-install` (4 vCPUs, 8GB RAM, 32GB Disk, UEFI).                       |
-| **[`connect.sh`](./connect.sh)**     | 🏠 _Host_         | Inicia a VM, abre o console gráfico e tenta conexão automática via SSH.                        |
-| **[`reboot.sh`](./reboot.sh)**       | 🏠 _Host_         | Reinicia o daemon da VM                                                                        |
-| **[`setup.sh`](./setup.sh)**         | 📟 _Guest (VM)_   | **O coração do setup.** Configura drivers, Desktop (GNOME), Editores, Shell e Ferramentas.     |
-| **[`uninstall.sh`](./uninstall.sh)** | 🏠 _Host_         | Remove completamente a VM e seus discos do sistema.                                            |
+| Script                               | Local de Execução | Descrição                                                                                           |
+| ------------------------------------ | ----------------- | --------------------------------------------------------------------------------------------------- |
+| **[`download.sh`](./download.sh)**   | 🏠 _Host_         | Baixa a ISO mais recente do FreeBSD, valida a integridade (SHA256) e extrai o arquivo `.xz`.        |
+| **[`install.sh`](./install.sh)**     | 🏠 _Host_         | Provisiona a VM no KVM via `virt-install` (4 vCPUs, 4GB RAM, 32GB Disk, UEFI).                      |
+| **[`connect.sh`](./connect.sh)**     | 🏠 _Host_         | Inicializa a VM, abre o console gráfico e estabelece a conexão automática via SSH.                  |
+| **[`reboot.sh`](./reboot.sh)**       | 🏠 _Host_         | Reinicia os recursos e o daemon de gerenciamento da VM.                                                           |
+| **[`setup.sh`](./setup.sh)**         | 📟 _Guest (VM)_   | **O coração do setup.** Automatiza o pós-instalação: drivers, GNOME, editores, shell e utilitários. |
+| **[`uninstall.sh`](./uninstall.sh)** | 🏠 _Host_         | Remove completamente a VM e desaloca todos os seus discos do sistema.                               |
 
 ## 🚀 **Como Utilizar**
 
