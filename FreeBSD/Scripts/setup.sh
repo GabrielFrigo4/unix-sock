@@ -3,26 +3,6 @@
 ### ################################################################################################################################
 
 ### ################################
-### FreeBSD Handbook
-### ################################
-
-### https://docs.freebsd.org/en/books/handbook/
-
-### ################################
-### FreeBSD Developers' Handbook
-### ################################
-
-### https://docs.freebsd.org/en/books/developers-handbook/
-
-### ################################
-### FreeBSD FAQs
-### ################################
-
-### https://docs.freebsd.org/en/books/faq/
-
-### ################################################################################################################################
-
-### ################################
 ### Setup System
 ### ################################
 
@@ -71,12 +51,16 @@ EOF
 chmod 0440 "/usr/local/etc/doas.conf"
 
 ### ################################
-### Setup Environment
+### Setup Environment (Root)
 ### ################################
 
 # DESKTOP
 sudo pkg install --yes desktop-installer
 sudo desktop-installer
+
+### ################################
+### Setup Environment (User)
+### ################################
 
 # GNOME X11
 sudo mv /usr/local/share/xsessions/gnome-classic.desktop /usr/local/share/xsessions/gnome-classic.desktop.bak
@@ -87,7 +71,7 @@ sudo mv /usr/local/share/wayland-sessions/gnome-classic.desktop /usr/local/share
 sudo mv /usr/local/share/wayland-sessions/gnome-classic-wayland.desktop /usr/local/share/wayland-sessions/gnome-classic-wayland.desktop.bak
 
 ### ################################
-### System Environment
+### System Environment (User)
 ### ################################
 
 # SHORTCUT
@@ -98,7 +82,7 @@ gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "www"           
 gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "search"        "['<Control><Alt>f']"
 
 ### ################################
-### Custom Settings
+### Custom Settings (User)
 ### ################################
 
 # CREATE LAUNCHER FUNCTION
