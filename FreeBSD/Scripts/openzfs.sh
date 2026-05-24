@@ -10,6 +10,10 @@ DISK="vtbd0"
 # Initialize GPT
 gpart create -s gpt "${DISK}"
 
+# Delete Partitions
+# gpart delete -i 4 "${DISK}" || true
+# gpart delete -i 3 "${DISK}" || true
+
 # Create EFI Partition
 gpart add -t efi -a 4k -s 200M "${DISK}"
 newfs_msdos "/dev/${DISK}p1"
