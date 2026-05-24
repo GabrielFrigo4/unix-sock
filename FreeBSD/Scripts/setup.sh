@@ -7,8 +7,8 @@
 ### ################################
 
 # GROUPS
-pw groupmod wheel -m gabriel
-pw groupmod video -m gabriel
+pw groupmod wheel -m freebsd
+pw groupmod video -m freebsd
 
 # PACKAGE
 pkg bootstrap --yes
