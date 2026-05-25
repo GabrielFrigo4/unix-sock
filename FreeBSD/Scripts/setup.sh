@@ -8,30 +8,17 @@
 
 # GROUPS
 pw groupmod wheel -m freebsd
-pw groupmod video -m freebsd
 
 # PACKAGE
 pkg bootstrap --yes
 pkg update
 pkg upgrade --yes
 
-# VMWARE
-pkg install --yes open-vm-tools
-pkg install --yes xf86-video-vmware
-pkg install --yes xf86-input-vmmouse
-sysrc vmware_guest_kmod_enable="YES"
-sysrc vmware_guestd_enable="YES"
-
 # KVM/QEMU
-pkg install --yes xf86-video-qxl
 pkg install --yes qemu-guest-agent
 sysrc qemu_guest_agent_enable="YES"
 sysrc qemu_guest_agent_flags="-d -m virtio-serial -p /dev/ttyV0.1"
-sysrc spice_vdagentd_enable="YES"
 service qemu-guest-agent start
-
-# UEFI
-pkg install --yes xf86-video-scfb
 
 # TERMINAL
 sysrc allscreens_flags="-f spleen-16x32"
@@ -50,49 +37,10 @@ permit nopass :wheel
 EOF
 chmod 0440 "/usr/local/etc/doas.conf"
 
-### ################################
-### Custom Settings (User)
-### ################################
-
-# CREATE LAUNCHER FUNCTION
-create_launcher() {
-	local INDEX="${1}"
-	local NAME="${2}"
-	local COMMAND="${3}"
-	local BINDING="${4}"
-	local KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom${INDEX}/"
-
-	gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH" "name" "$NAME"
-	gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH" "command" "$COMMAND"
-	gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH" "binding" "$BINDING"
-
-	local CURRENT_LIST
-	CURRENT_LIST="$(gsettings get "org.gnome.settings-daemon.plugins.media-keys" custom-keybindings)"
-
-	if [[ "$CURRENT_LIST" != *"$KEY_PATH"* ]]; then
-		local NEW_LIST
-		if [ "$CURRENT_LIST" = "@as []" ]; then
-			NEW_LIST="['$KEY_PATH']"
-		else
-			NEW_LIST="${CURRENT_LIST%]}, '$KEY_PATH']"
-		fi
-		gsettings set "org.gnome.settings-daemon.plugins.media-keys" custom-keybindings "$NEW_LIST"
-		echo "✅ $NAME added successfully."
-	else
-		echo "ℹ️  $NAME was already configured."
-	fi
-}
-
-# CREATE LAUNCHERS
-create_launcher 0   "Launch Settings"       "gnome-control-center"  "<Control><Alt>s"
-create_launcher 1   "Launch Console"        "kgx"                   "<Control><Alt>t"
-create_launcher 2   "Launch Terminal"       "ptyxis"                "<Control><Alt>y"
-create_launcher 3   "Launch Emacs"          "emacs"                 "<Control><Alt>e"
-
 ### ################################################################################################################################
 
 ### ################################
-### Setup Shell
+### Setup Shell (User)
 ### ################################
 
 # SHELL
@@ -100,7 +48,7 @@ sudo pkg install --yes bash
 sudo pkg install --yes zsh
 
 ### ################################
-### Setup Wget
+### Setup Wget (User)
 ### ################################
 
 # WGET
@@ -109,7 +57,7 @@ sudo pkg install --yes wget2
 sudo pkg install --yes curl
 
 ### ################################
-### Setup Git
+### Setup Git (User)
 ### ################################
 
 # GIT ECOSYSTEM
@@ -131,7 +79,7 @@ gh auth login
 gh auth setup-git
 
 ### ################################
-### Setup Ports
+### Setup Ports (User)
 ### ################################
 
 # PORTS
@@ -143,7 +91,7 @@ sudo git pull
 cd "${HOME}"
 
 ### ################################
-### Setup Jails
+### Setup Jails (User)
 ### ################################
 
 # JAILS
@@ -157,14 +105,14 @@ sudo service bastille start
 ### ################################################################################################################################
 
 ### ################################
-### Config Shell
+### Config Shell (User)
 ### ################################
 
 # Default Shell
 sudo chsh -s "$(which sh)" "$(whoami)"
 sudo chsh -s "$(which sh)" "root"
 
-# Kgx Config
+# Shell Bootstrap
 SHELL_BLOCK="$(mktemp)"
 cat << 'EOF' | tee "${SHELL_BLOCK}" > "/dev/null"
 ### ################################
@@ -353,7 +301,7 @@ alias upall='uppkg'
 EOF
 
 ### ################################
-### Config Bash
+### Config Bash (User)
 ### ################################
 
 # Config Bash
@@ -458,7 +406,7 @@ alias upall='uppkg'
 EOF
 
 ### ################################
-### Config Zsh
+### Config Zsh (User)
 ### ################################
 
 # Install Oh My Zsh
@@ -618,88 +566,7 @@ EOF
 ### ################################################################################################################################
 
 ### ################################
-### Installing System Fonts
-### ################################
-
-sudo pkg install --yes fontconfig
-mkdir -p "${HOME}/.local/share/fonts"
-
-### ################################
-### Microsoft System Fonts
-### ################################
-
-sudo pkg install --yes webfonts
-sudo pkg install --yes carlito-ttf
-
-### ################################
-### RobotoMono Nerd Fonts
-### ################################
-
-# https://www.nerdfonts.com/font-downloads
-wget "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/RobotoMono.zip" -O "RobotoMono.zip"
-unzip -o RobotoMono.zip -d "${HOME}/.local/share/fonts"
-rm -f "${HOME}/.local/share/fonts/LICENSE.txt"
-rm -f "${HOME}/.local/share/fonts/README.md"
-rm -f RobotoMono.zip
-
-### ################################
-### JetBrains Nerd Fonts
-### ################################
-
-# https://www.nerdfonts.com/font-downloads
-wget "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" -O "JetBrainsMono.zip"
-unzip -o JetBrainsMono.zip -d "${HOME}/.local/share/fonts"
-rm -f "${HOME}/.local/share/fonts/OFL.txt"
-rm -f "${HOME}/.local/share/fonts/README.md"
-rm -f JetBrainsMono.zip
-
-### ################################
-### MesloLGS Nerd Fonts
-### ################################
-
-# https://github.com/romkatv/powerlevel10k#meslo-nerd-font-patched-for-powerlevel10k
-# MesloLGS NF Regular
-wget "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf" -O "MesloLGS NF Regular.ttf"
-mv "MesloLGS NF Regular.ttf" "${HOME}/.local/share/fonts"
-# MesloLGS NF Bold
-wget "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf" -O "MesloLGS NF Bold.ttf"
-mv "MesloLGS NF Bold.ttf" "${HOME}/.local/share/fonts"
-# MesloLGS NF Italic
-wget "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf" -O "MesloLGS NF Italic.ttf"
-mv "MesloLGS NF Italic.ttf" "${HOME}/.local/share/fonts"
-# MesloLGS NF Bold Italic
-wget "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf" -O "MesloLGS NF Bold Italic.ttf"
-mv "MesloLGS NF Bold Italic.ttf" "${HOME}/.local/share/fonts"
-
-### ################################
-### JetBrains Mono Nerd Fonts
-### ################################
-
-# https://github.com/JetBrains/JetBrainsMono
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/install_manual.sh)"
-
-### ################################
-### Nerd Font Symbols Only
-### ################################
-
-# https://www.nerdfonts.com/font-downloads
-wget "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.zip" -O "NerdFontsSymbolsOnly.zip"
-unzip -o "NerdFontsSymbolsOnly.zip" -d "${HOME}/.local/share/fonts"
-rm -f "${HOME}/.local/share/fonts/10-nerd-font-symbols.conf"
-rm -f "${HOME}/.local/share/fonts/LICENSE"
-rm -f "${HOME}/.local/share/fonts/README.md"
-rm "NerdFontsSymbolsOnly.zip"
-
-### ################################
-### Update Font Cache
-### ################################
-
-fc-cache -fv
-
-### ################################################################################################################################
-
-### ################################
-### Installing Needed Tools
+### Installing Needed Tools (User)
 ### ################################
 
 # Man Pages
@@ -716,7 +583,7 @@ sudo pkg install --yes unzip
 sudo pkg install --yes 7-zip
 
 ### ################################
-### Installing Rust Tools
+### Installing Rust Tools (User)
 ### ################################
 
 # New Tools
@@ -728,7 +595,7 @@ sudo pkg install --yes grex
 sudo pkg install --yes ripgrep
 
 ### ################################
-### Installing System Fetch
+### Installing System Fetch (User)
 ### ################################
 
 # Fetch
@@ -739,15 +606,7 @@ sudo pkg install --yes pfetch-rs
 sudo pkg install --yes cpufetch
 
 ### ################################
-### Installing System Tools
-### ################################
-
-# Clipboard
-sudo pkg install --yes wl-clipboard
-sudo pkg install --yes xclip
-
-### ################################
-### Installing Web/Net Tools
+### Installing Web/Net Tools (User)
 ### ################################
 
 # Browser
@@ -760,9 +619,10 @@ sudo pkg install --yes elinks
 sudo pkg install --yes netcat
 
 ### ################################
-### Installing treeSitter
+### Installing TreeSitter (User)
 ### ################################
 
+# TreeSitter
 sudo pkg install --yes tree-sitter
 sudo pkg install --yes tree-sitter-cli
 sudo pkg install --yes tree-sitter-grammars
@@ -771,23 +631,44 @@ sudo pkg install --yes tree-sitter-graph
 ### ################################################################################################################################
 
 ### ################################
-### Installing Terminal Editor
+### Installing Editor (User)
 ### ################################
 
-# Terminal Editor
+# Editor
+sudo pkg install --yes mg
+sudo pkg install --yes emacs-nox
 sudo pkg install --yes micro
 sudo pkg install --yes nano
+sudo pkg install --yes helix
 sudo pkg install --yes neovim
+sudo pkg install --yes vim
 
 ### ################################
-### Installing Window Editor
+### Installing Git Config (User)
 ### ################################
 
-# Window Editor
-sudo pkg install --yes emacs
+# Helix
+git clone "https://github.com/GabrielFrigo4/helix.git" "${HOME}/.config/helix"
+# Vim
+git clone "https://github.com/GabrielFrigo4/vimfiles.git" "${HOME}/vimfiles"
+cat << 'EOF' | tee "${HOME}/.vimrc" > "/dev/null"
+set rtp+=~/vimfiles
+source ~/vimfiles/vimrc
+EOF
 
 ### ################################
-### Setup Emacs Config
+### Updating Git Config (User)
+### ################################
+
+# Update
+cd "${HOME}/.config/helix"
+git pull
+cd "${HOME}/vimfiles"
+git pull
+cd "${HOME}"
+
+### ################################
+### Setup Emacs Config (User)
 ### ################################
 
 # Remove Lixo
@@ -822,9 +703,6 @@ sed -i 's/sh[[:space:]]*;/(sh +tree-sitter) ;/' "${HOME}/.config/doom/init.el"
 
 # Setup config.el
 cat << 'EOF' | tee -a "${HOME}/.config/doom/config.el" > "/dev/null"
-;; Configuração de Fonte (JetBrains Mono)
-(setq doom-font (font-spec :family "JetBrainsMonoNL Nerd Font Mono" :size 16 :weight 'medium)
-      doom-variable-pitch-font (font-spec :family "JetBrainsMonoNL Nerd Font Mono" :size 16))
 ;; Ativar Cursor Piscante
 (blink-cursor-mode t)
 
@@ -847,7 +725,7 @@ EOF
 ~/.config/emacs/bin/doom upgrade
 
 ### ################################
-### Setup NeoVim Config
+### Setup NeoVim Config (User)
 ### ################################
 
 # Remove Lixo
@@ -875,7 +753,7 @@ vim.api.nvim_create_autocmd({ 'VimLeave', 'VimSuspend' }, {
 EOF
 
 ### ################################
-### Installing Theme in Micro
+### Setup Micro Config (User)
 ### ################################
 
 ### https://draculatheme.com/micro
@@ -892,21 +770,25 @@ EOF
 ### ################################################################################################################################
 
 ### ################################
-### Installing Languages
+### Installing Languages (User)
 ### ################################
 
 # C/C++
 sudo pkg install --yes gcc
+sudo pkg install --yes llvm
+
+# Assembly
+sudo pkg install --yes nasm
+sudo pkg install --yes fasm
 
 # Python
 sudo pkg install --yes python
 
-### ################################################################################################################################
-
-# Web Browser
-sudo pkg install --yes firefox
-
-# Terminal
-sudo pkg install --yes ptyxis
+# Lua
+sudo pkg install --yes lua54 lua54-luarocks
+sudo pkg install --yes lua53 lua53-luarocks
+sudo pkg install --yes lua52 lua52-luarocks
+sudo pkg install --yes lua51 lua51-luarocks
+sudo pkg install --yes luajit
 
 ### ################################################################################################################################
