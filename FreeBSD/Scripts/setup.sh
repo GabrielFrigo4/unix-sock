@@ -130,7 +130,11 @@ fi
 
 if [ -z "${SHELL_INIT}" ]; then
 	if [ -z "${SHELL_TARGET}" ]; then
-		SHELL_TARGET="$(which zsh)"
+		case "$(command tty 2> "/dev/null")" in
+			"/dev/ttyv"*|"/dev/console") SHELL_TARGET="$(command -v sh 2> "/dev/null")" ;;
+			*) SHELL_TARGET="$(command -v zsh 2> "/dev/null")" ;;
+		esac
+		[ -x "${SHELL_TARGET}" ] || SHELL_TARGET="$(command -v sh 2> "/dev/null")"
 	fi
 
 	if [ -x "${SHELL_TARGET}" ]; then
