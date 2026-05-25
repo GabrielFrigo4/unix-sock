@@ -6,13 +6,13 @@ Scripts desenvolvidos em **sh** (Shell padrão do FreeBSD) para automatizar a pr
 
 | Script                               | Local de Execução | Descrição                                                                                           |
 | ------------------------------------ | ----------------- | --------------------------------------------------------------------------------------------------- |
-| **[`download.sh`](<./download.sh>)**   | 🏠 _Host_         | Baixa a ISO mais recente do FreeBSD, valida a integridade (SHA256) e extrai o arquivo `.xz`.        |
-| **[`openzfs.sh`](<./openzfs.sh>)** | 📟 *Guest (VM)* | Configura o particionamento do disco alvo (GPT/EFI), inicializa o pool ZFS (`zroot`), cria os datasets base e prepara o bootloader UEFI. |
-| **[`install.sh`](<./install.sh>)**     | 🏠 _Host_         | Provisiona a VM no KVM via `virt-install` (4 vCPUs, 4GB RAM, 32GB Disk, UEFI).                      |
-| **[`connect.sh`](<./connect.sh>)**     | 🏠 _Host_         | Inicializa a VM, abre o console gráfico e estabelece a conexão automática via SSH.                  |
-| **[`reboot.sh`](<./reboot.sh>)**       | 🏠 _Host_         | Reinicia os recursos e o daemon de gerenciamento da VM.                                                           |
+| **[`download.sh`](<./kvm/download.sh>)**   | 🏠 _Host_         | Baixa a ISO mais recente do FreeBSD, valida a integridade (SHA256) e extrai o arquivo `.xz`.        |
+| **[`openzfs.sh`](<./kvm/openzfs.sh>)** | 📟 *Guest (VM)* | Configura o particionamento do disco alvo (GPT/EFI), inicializa o pool ZFS (`zroot`), cria os datasets base e prepara o bootloader UEFI. |
+| **[`install.sh`](<./kvm/install.sh>)**     | 🏠 _Host_         | Provisiona a VM no KVM via `virt-install` (4 vCPUs, 4GB RAM, 32GB Disk, UEFI).                      |
+| **[`connect.sh`](<./kvm/connect.sh>)**     | 🏠 _Host_         | Inicializa a VM, abre o console gráfico e estabelece a conexão automática via SSH.                  |
+| **[`reboot.sh`](<./kvm/reboot.sh>)**       | 🏠 _Host_         | Reinicia os recursos e o daemon de gerenciamento da VM.                                                           |
 | **[`setup.sh`](<./setup.sh>)**         | 📟 _Guest (VM)_   | **O coração do setup.** Automatiza o pós-instalação: drivers, GNOME, editores, shell e utilitários. |
-| **[`uninstall.sh`](<./uninstall.sh>)** | 🏠 _Host_         | Remove completamente a VM e desaloca todos os seus discos do sistema.                               |
+| **[`uninstall.sh`](<./kvm/uninstall.sh>)** | 🏠 _Host_         | Remove completamente a VM e desaloca todos os seus discos do sistema.                               |
 
 ## 🚀 **Como Utilizar**
 

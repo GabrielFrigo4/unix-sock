@@ -51,37 +51,6 @@ EOF
 chmod 0440 "/usr/local/etc/doas.conf"
 
 ### ################################
-### Setup Environment (Root)
-### ################################
-
-# DESKTOP
-sudo pkg install --yes desktop-installer
-sudo desktop-installer
-
-### ################################
-### Setup Environment (User)
-### ################################
-
-# GNOME X11
-sudo mv /usr/local/share/xsessions/gnome-classic.desktop /usr/local/share/xsessions/gnome-classic.desktop.bak
-sudo mv /usr/local/share/xsessions/gnome-classic-xorg.desktop /usr/local/share/xsessions/gnome-classic-xorg.desktop.bak
-
-# GNOME WAYLAND
-sudo mv /usr/local/share/wayland-sessions/gnome-classic.desktop /usr/local/share/wayland-sessions/gnome-classic.desktop.bak
-sudo mv /usr/local/share/wayland-sessions/gnome-classic-wayland.desktop /usr/local/share/wayland-sessions/gnome-classic-wayland.desktop.bak
-
-### ################################
-### System Environment (User)
-### ################################
-
-# SHORTCUT
-gsettings set "org.gnome.desktop.wm.keybindings"                "show-desktop"  "[]"
-gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "home"          "['<Control><Alt>h']"
-gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "calculator"    "['<Control><Alt>c']"
-gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "www"           "['<Control><Alt>g']"
-gsettings set "org.gnome.settings-daemon.plugins.media-keys"    "search"        "['<Control><Alt>f']"
-
-### ################################
 ### Custom Settings (User)
 ### ################################
 
