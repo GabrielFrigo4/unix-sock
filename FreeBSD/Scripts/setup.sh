@@ -137,7 +137,7 @@ if [ -z "${SHELL_INIT}" ]; then
 		[ -x "${SHELL_TARGET}" ] || SHELL_TARGET="$(command -v sh 2> "/dev/null")"
 	fi
 
-	if [ -x "${SHELL_TARGET}" ]; then
+	if [ -x "${SHELL_TARGET}" ] && [ "${SHELL_TARGET}" != "$(command -v sh 2> "/dev/null")" ]; then
 		export SHELL_INIT=1
 		export SHELL="${SHELL_TARGET}"
 		unset SHELL_TARGET
