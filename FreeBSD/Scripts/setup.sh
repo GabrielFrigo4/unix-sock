@@ -121,7 +121,7 @@ cat << 'EOF' | tee "${SHELL_BLOCK}" > "/dev/null"
 
 TRIGGERS_CACHE="${HOME}/.cache/triggers.sh"
 
-triggers_setup() {
+triggers-setup() {
 	mkdir -p "${HOME}/.cache"
 	echo "# $(command date +%Y-%m-%d)" > "${TRIGGERS_CACHE}"
 
@@ -176,7 +176,7 @@ if [ -f "${TRIGGERS_CACHE}" ]; then
 fi
 
 if [ ! -f "${TRIGGERS_CACHE}" ]; then
-	triggers_setup
+	triggers-setup
 fi
 
 ### ################################
@@ -303,7 +303,7 @@ run_and_update() {
 	return $ret
 }
 
-alias triggers_reset="rm -f ${TRIGGERS_CACHE} && triggers_setup && . ${TRIGGERS_CACHE}"
+alias triggers-reset="rm -f ${TRIGGERS_CACHE} && triggers-setup && . ${TRIGGERS_CACHE}"
 . "${TRIGGERS_CACHE}"
 
 ### ################################
