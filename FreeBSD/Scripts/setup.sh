@@ -694,9 +694,9 @@ git clone "https://github.com/GabrielFrigo4/helix.git" "${HOME}/.config/helix"
 ### ################################
 
 # Update
-cd "${HOME}/.config/helix"
-git pull
 cd "${HOME}/vimfiles"
+git pull
+cd "${HOME}/.config/helix"
 git pull
 cd "${HOME}"
 
