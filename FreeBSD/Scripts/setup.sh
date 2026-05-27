@@ -7,7 +7,7 @@
 ### ################################
 
 # GROUPS
-pw groupmod wheel -m "${USER}"
+pw groupmod wheel -m "$(whoami)"
 
 # PACKAGE
 pkg bootstrap --yes
