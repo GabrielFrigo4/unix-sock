@@ -625,6 +625,11 @@ sudo pkg install --yes zip
 sudo pkg install --yes unzip
 sudo pkg install --yes 7-zip
 
+# Cryptography
+sudo pkg install --yes gnupg
+sudo pkg install --yes openssl
+sudo pkg install --yes libressl
+
 ### ################################
 ### Installing Rust Tools (User)
 ### ################################
