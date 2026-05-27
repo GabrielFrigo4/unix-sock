@@ -667,27 +667,27 @@ sudo pkg install --yes tree-sitter-graph
 ### Installing Editor (User)
 ### ################################
 
-# Editor
-sudo pkg install --yes mg
+# Terminal Editor
 sudo pkg install --yes emacs-nox
-sudo pkg install --yes micro
-sudo pkg install --yes nano
-sudo pkg install --yes helix
 sudo pkg install --yes neovim
 sudo pkg install --yes vim
+sudo pkg install --yes helix
+sudo pkg install --yes micro
+sudo pkg install --yes mg
+sudo pkg install --yes nano
 
 ### ################################
 ### Installing Git Config (User)
 ### ################################
 
-# Helix
-git clone "https://github.com/GabrielFrigo4/helix.git" "${HOME}/.config/helix"
 # Vim
 git clone "https://github.com/GabrielFrigo4/vimfiles.git" "${HOME}/vimfiles"
 cat << 'EOF' | tee "${HOME}/.vimrc" > "/dev/null"
 set rtp+=~/vimfiles
 source ~/vimfiles/vimrc
 EOF
+# Helix
+git clone "https://github.com/GabrielFrigo4/helix.git" "${HOME}/.config/helix"
 
 ### ################################
 ### Updating Git Config (User)
