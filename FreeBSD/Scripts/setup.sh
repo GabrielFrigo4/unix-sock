@@ -123,7 +123,7 @@ TRIGGERS_CACHE="${HOME}/.cache/triggers.sh"
 
 triggers_setup() {
 	mkdir -p "${HOME}/.cache"
-	> "${TRIGGERS_CACHE}"
+	echo "# $(command date +%Y-%m-%d)" > "${TRIGGERS_CACHE}"
 
 	local IGNORE_LIST=" sh command eval alias unalias return echo printf test [ clear "
 	TRIGGERS=""
@@ -155,6 +155,7 @@ triggers_setup() {
 	TRIGGERS=$(echo ${TRIGGERS} | tr ' ' '\n' | sort -u | tr '\n' ' ')
 	for cmd in ${TRIGGERS}; do
 		if command -v "$cmd" > "/dev/null" 2>&1; then
+			echo "unalias ${cmd} > \"/dev/null\" 2>&1" >> "${TRIGGERS_CACHE}"
 			case "$cmd" in
 				*+*|*-*|*.*)
 					echo "alias ${cmd}='run_and_update ${cmd}'" >> "${TRIGGERS_CACHE}"
@@ -166,6 +167,13 @@ triggers_setup() {
 		fi
 	done
 }
+
+if [ -f "${TRIGGERS_CACHE}" ]; then
+	read -r TRIGGERS_DATE < "${TRIGGERS_CACHE}"
+	if [ "${TRIGGERS_DATE}" != "# $(command date +%Y-%m-%d)" ]; then
+		command rm -f "${TRIGGERS_CACHE}"
+	fi
+fi
 
 if [ ! -f "${TRIGGERS_CACHE}" ]; then
 	triggers_setup
