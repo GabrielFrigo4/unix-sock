@@ -116,6 +116,62 @@ sudo chsh -s "$(which sh)" "root"
 SHELL_BLOCK="$(mktemp)"
 cat << 'EOF' | tee "${SHELL_BLOCK}" > "/dev/null"
 ### ################################
+### TRIGGERS ENVIRONMENT
+### ################################
+
+TRIGGERS_CACHE="${HOME}/.cache/triggers.sh"
+
+triggers_setup() {
+	mkdir -p "${HOME}/.cache"
+	> "${TRIGGERS_CACHE}"
+
+	local IGNORE_LIST=" sh command eval alias unalias return echo printf test [ clear "
+	TRIGGERS=""
+
+	for file in /bin/* /sbin/* /usr/bin/* /usr/sbin/*; do
+		if [ -f "$file" ] && [ -x "$file" ]; then
+			local cmd_name="${file##*/}"
+			case "${IGNORE_LIST}" in
+				*" ${cmd_name} "*) continue ;;
+			esac
+			TRIGGERS="${TRIGGERS} ${cmd_name}"
+		fi
+	done
+
+	for file in /usr/local/bin/? /usr/local/sbin/? \
+				/usr/local/bin/?? /usr/local/sbin/?? \
+				/usr/local/bin/??? /usr/local/sbin/??? \
+				/usr/local/bin/???? /usr/local/sbin/???? \
+				/usr/local/bin/????? /usr/local/sbin/?????; do
+		if [ -f "$file" ] && [ -x "$file" ]; then
+			local cmd_name="${file##*/}"
+			case "${IGNORE_LIST}" in
+				*" ${cmd_name} "*) continue ;;
+			esac
+			TRIGGERS="${TRIGGERS} ${cmd_name}"
+		fi
+	done
+
+	TRIGGERS=$(echo ${TRIGGERS} | tr ' ' '\n' | sort -u | tr '\n' ' ')
+	for cmd in ${TRIGGERS}; do
+		if command -v "$cmd" > "/dev/null" 2>&1; then
+			case "$cmd" in
+				*+*|*-*|*.*)
+					echo "alias ${cmd}='run_and_update ${cmd}'" >> "${TRIGGERS_CACHE}"
+					;;
+				*)
+					echo "${cmd}() { run_and_update ${cmd} \"\$@\"; }" >> "${TRIGGERS_CACHE}"
+					;;
+			esac
+		fi
+	done
+}
+
+if [ ! -f "${TRIGGERS_CACHE}" ]; then
+	triggers_setup
+fi
+
+### ################################
 ### TERMINAL ENVIRONMENT
 ### ################################
 
@@ -239,51 +295,8 @@ run_and_update() {
 	return $ret
 }
 
-TRIGGERS_NATIVE="hostname uname id"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE freebsd-version uptime"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE chmod chown chflags su"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE cd touch cp mv rm rmdir mkdir ln"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE clear ls find grep"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE cat echo printf tee head tail less more"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE sed awk patch truncate"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE vi edit ee"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE base64 dd"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE df du"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE top kill killall"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE make cc c++ clang clang++"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE as ld objdump readelf"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE tar gzip bzip2 xz zstd"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE fetch ssh scp sftp"
-TRIGGERS_NATIVE="$TRIGGERS_NATIVE pkg"
-
-TRIGGERS_EXTERN="sudo doas"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN git gh"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN gmake cmake ninja"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN gcc g++ zig cargo rustc go gofmt nasm"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN python python3 pip venv uv poetry"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN node npm npx yarn pnpm bun"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN vim nvim emacs nano micro bat"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN rg exa eza fd"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN htop btop"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN neofetch fastfetch ufetch pfetch-rs cpufetch"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN 7z zip unzip rar unrar"
-TRIGGERS_EXTERN="$TRIGGERS_EXTERN wget curl rsync aria2c http"
-
-TRIGGERS="$TRIGGERS_NATIVE $TRIGGERS_EXTERN"
-TRIGGERS=$(echo $TRIGGERS | tr ' ' '\n' | sort -u | tr '\n' ' ')
-for cmd in $TRIGGERS; do
-	if command -v "$cmd" > "/dev/null" 2>&1; then
-		unalias "$cmd" 2> "/dev/null"
-		case "$cmd" in
-			*+*|*-*|*.*)
-				alias "$cmd"="run_and_update $cmd"
-				;;
-			*)
-				eval "${cmd}() { run_and_update ${cmd} \"\$@\"; }"
-				;;
-		esac
-	fi
-done
+alias triggers_reset="rm -f ${TRIGGERS_CACHE} && triggers_setup && . ${TRIGGERS_CACHE}"
+. "${TRIGGERS_CACHE}"
 
 ### ################################
 ### SHELL FUNCTIONS
