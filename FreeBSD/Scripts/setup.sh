@@ -107,6 +107,10 @@ cd "${HOME}"
 # JAILS
 sudo sysrc jail_enable="YES"
 
+### ################################
+### Setup Containers (User)
+### ################################
+
 # BASTILLE
 sudo pkg install --yes bastille
 sudo sysrc bastille_enable="YES"
