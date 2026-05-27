@@ -7,7 +7,7 @@
 ### ################################
 
 # GROUPS
-pw groupmod wheel -m freebsd
+pw groupmod wheel -m "${USER}"
 
 # PACKAGE
 pkg bootstrap --yes
