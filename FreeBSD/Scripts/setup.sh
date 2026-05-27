@@ -37,6 +37,16 @@ permit nopass :wheel
 EOF
 chmod 0440 "/usr/local/etc/doas.conf"
 
+### ################################
+### Setup Environment (Root)
+### ################################
+
+# COREDUMP
+sysctl kern.coredump=0
+cat << 'EOF' | tee -a "/etc/sysctl.conf" > "/dev/null"
+kern.coredump=0
+EOF
+
 ### ################################################################################################################################
 
 ### ################################
