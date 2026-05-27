@@ -7,7 +7,7 @@
 ### ################################
 
 # GROUPS
-pw groupmod wheel -m "$(whoami)"
+pw groupmod wheel -m "$(id -un)"
 
 # PACKAGE
 pkg bootstrap --yes
@@ -119,7 +119,7 @@ sudo service bastille start
 ### ################################
 
 # Default Shell
-sudo chsh -s "$(which sh)" "$(whoami)"
+sudo chsh -s "$(which sh)" "$(id -un)"
 sudo chsh -s "$(which sh)" "root"
 
 # Shell Bootstrap
