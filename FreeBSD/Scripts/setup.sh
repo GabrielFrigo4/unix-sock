@@ -329,10 +329,10 @@ alias triggers-reset="rm -f ${TRIGGERS_CACHE} && triggers-setup && . ${TRIGGERS_
 ### ################################
 
 # Commands ALIAS
-alias clear='command printf "\033[H\033[2J\033[3J"'
+alias clear="command printf \"\e[H\e[2J\e[3J\""
 # Packages ALIAS
-alias uppkg='command sudo pkg update && command sudo pkg upgrade --yes'
-alias upall='uppkg'
+alias uppkg="command sudo pkg update && command sudo pkg upgrade --yes"
+alias upall="uppkg"
 
 ### ################################
 ### SHELL CONFIGURATION
@@ -442,10 +442,10 @@ PROMPT_COMMAND=update_prompt
 ### ################################
 
 # Commands ALIAS
-alias clear='printf "\e[H\e[2J\e[3J"'
+alias clear="printf \"\e[H\e[2J\e[3J\""
 # Packages ALIAS
-alias uppkg='sudo pkg update && sudo pkg upgrade --yes'
-alias upall='uppkg'
+alias uppkg="sudo pkg update && sudo pkg upgrade --yes"
+alias upall="uppkg"
 
 ### ################################
 ### SHELL CONFIGURATION
@@ -600,10 +600,10 @@ ${y}└─${B}${z} "
 ### ################################
 
 # Commands ALIAS
-alias clear='printf "\e[H\e[2J\e[3J"'
+alias clear="printf \"\e[H\e[2J\e[3J\""
 # Packages ALIAS
-alias uppkg='sudo pkg update && sudo pkg upgrade --yes'
-alias upall='uppkg'
+alias uppkg="sudo pkg update && sudo pkg upgrade --yes"
+alias upall="uppkg"
 
 ### ################################
 ### SHELL CONFIGURATION
