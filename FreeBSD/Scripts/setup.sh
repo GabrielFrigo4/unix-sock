@@ -249,14 +249,20 @@ export SHELL_INIT=1
 ### ################################
 
 path_front() {
-	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
-		export PATH="${1}:${PATH}"
+	if [ -d "${1}" ]; then
+		case ":${PATH}:" in
+			*":${1}:"*) ;;
+			*) export PATH="${1}:${PATH}" ;;
+		esac
 	fi
 }
 
 path_back() {
-	if [ -d "${1}" ] && [[ ":${PATH}:" != *":${1}:"* ]]; then
-		export PATH="${PATH}:${1}"
+	if [ -d "${1}" ]; then
+		case ":${PATH}:" in
+			*":${1}:"*) ;; 
+			*) export PATH="${PATH}:${1}" ;;
+		esac
 	fi
 }
 
