@@ -1,8 +1,17 @@
-# 🌐 **Projeto: Implementação de um Web Server HTTP Concorrente (C/POSIX)**
+# Servidor Web HTTP Concorrente (C / POSIX / FreeBSD)
 
-Bem-vindo a este repositório de pesquisa e estudo em Engenharia de Sistemas. O foco aqui não é entregar um produto "pronto para produção", mas documentar, explorar e compreender a anatomia de um servidor HTTP concorrente escrito inteiramente em C, interagindo diretamente com as APIs do sistema operacional. Este é um espaço dedicado à investigação técnica sobre como as redes e os sistemas realmente operam por baixo dos panos.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?logo=open-source-initiative&logoColor=white)](LICENSE)
+[![C Standard: C23](https://img.shields.io/badge/C_Standard-C23-blue.svg?logo=c&logoColor=white)](Project/)
+[![POSIX: 2024](https://img.shields.io/badge/POSIX-2024-purple.svg?logo=freebsd&logoColor=white)](Project/)
+[![OS: FreeBSD](https://img.shields.io/badge/OS-FreeBSD_kqueue-red.svg?logo=freebsd&logoColor=white)](FreeBSD/)
+[![Security: Capsicum Sandbox](https://img.shields.io/badge/Security-Capsicum_Sandbox-green.svg)](Project/)
+[![Build: POSIX Make](https://img.shields.io/badge/Build-POSIX_Make-orange.svg?logo=gnu-make&logoColor=white)](Makefile)
 
-## 🧠 **A Filosofia e o Desafio Arquitetural**
+Bem-vindo a este repositório de pesquisa e engenharia de sistemas. O foco deste projeto é desconstruir a abstração de redes modernas e investigar a anatomia de um servidor HTTP concorrente escrito inteiramente em C puro sobre as primitivas de rede do POSIX e a multiplexação de eventos `kqueue` do FreeBSD.
+
+---
+
+## Filosofia e Desafio Arquitetural
 
 No ecossistema de desenvolvimento moderno, a comunicação de rede é frequentemente ofuscada por pesadas abstrações (frameworks web, reverse proxies, runtimes gerenciados). O objetivo primário deste projeto não é competir com o Nginx ou Apache, mas sim **desconstruir a abstração**.
 
@@ -10,11 +19,11 @@ Desenvolver um servidor HTTP/1.1 em **C puro** exige confrontar diretamente a du
 
 1.  **O Modelo OSI na Prática:** A transição do fluxo de bytes brutos da Camada 4 (TCP) para o protocolo semântico da Camada 7 (HTTP), lidando com fragmentação de pacotes, reconstrução de _streams_ e latência.
 2.  **Gerenciamento de Estado sem Garbage Collector:** Como alocar, rastrear e liberar memória (buffers de requisição e resposta) em um ambiente de alta concorrência sem introduzir _Memory Leaks_ ou _Use-After-Free_.
-3.  **A Evolução da Concorrência:** O estudo propõe uma jornada arquitetural clara. A base teórica começa com a compreensão das regras universais do UNIX (modelos POSIX tradicionais) para, em seguida, explorar a quebra dessas regras em busca de performance extrema utilizando APIs assíncronas e específicas de Kernel (como Event-Driven/kqueue).
+3.  **A Evolução da Concorrência:** O estudo propõe uma jornada arquitetural clara: da compreensão das regras universais do UNIX (modelos POSIX tradicionais) à performance extrema utilizando APIs assíncronas de Kernel (`kqueue`).
 
 ---
 
-# 😈 **O Ambiente de Desenvolvimento: Por que FreeBSD?**
+## O Ambiente de Desenvolvimento: Por que FreeBSD?
 
 Embora os conceitos teóricos abordados sejam amplamente multiplataforma, o **FreeBSD** foi escolhido como o ecossistema primário de pesquisa, arquitetura e validação. Para engenharia de software de baixo nível (Systems Programming), o FreeBSD oferece vantagens estruturais e ferramentas analíticas que superam alternativas tradicionais.
 
