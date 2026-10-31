@@ -38,7 +38,7 @@ help:
 all: help
 
 ### ================================
-### BUILD & EXECUTION (Project/)
+### BUILD & EXECUTION PROJECT
 ### ================================
 build:
 	echo "⚙️  Delegando compilação para Project/Makefile..."
