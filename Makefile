@@ -53,8 +53,10 @@ update:
 	$(MAKE) -C Project update
 
 clean:
-	echo "🧹 Limpando artefatos de compilação em Project/..."
+	echo "🧹 Limpando artefatos de compilação em Project/, caches e .venv..."
 	$(MAKE) -C Project clean
+	rm -rf .venv
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2> "/dev/null" || true
 
 erase:
 	echo "🔥 Executando apagamento total em Project/..."
