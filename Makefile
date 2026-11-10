@@ -42,29 +42,29 @@ all: help
 ### ================================
 build:
 	echo "⚙️  Delegando compilação para Project/Makefile..."
-	$(MAKE) -C Project build
+	(cd Project && $(MAKE) build)
 
 run:
 	echo "🟢 Iniciando servidor a partir de Project/..."
-	$(MAKE) -C Project run
+	(cd Project && $(MAKE) run)
 
 update:
 	echo "🚀 Disparando atualização remota via Project/..."
-	$(MAKE) -C Project update
+	(cd Project && $(MAKE) update)
 
 clean:
 	echo "🧹 Limpando artefatos de compilação em Project/, caches e .venv..."
-	$(MAKE) -C Project clean
+	(cd Project && $(MAKE) clean)
 	rm -rf .venv
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2> "/dev/null" || true
 
 erase:
 	echo "🔥 Executando apagamento total em Project/..."
-	$(MAKE) -C Project erase
+	(cd Project && $(MAKE) erase)
 
 clangd:
 	echo "📝 Atualizando compile_commands.json em Project/..."
-	$(MAKE) -C Project clangd
+	(cd Project && $(MAKE) clangd)
 
 ### ================================
 ### GOVERNANCE & QUALITY GATES
@@ -75,23 +75,39 @@ format: clang-format prettier
 clang-format:
 	echo "🎨 Formatando arquivos C/Header com clang-format..."
 	if command -v clang-format > "/dev/null" 2>&1; then \
-		find Project/src Project/inc -type f \( -name "*.c" -o -name "*.h" \) -exec clang-format -i {} + 2>/dev/null || true; \
+		find Project/src Project/inc -type f \( -name "*.c" -o -name "*.h" \) -exec clang-format -i {} + 2> "/dev/null" || true; \
 	fi
 
 prettier:
 	echo "🎨 Formatando arquivos com Prettier..."
 	if command -v prettier > "/dev/null" 2>&1; then \
-		prettier --write "**/*.{md,json,jsonc,yml,yaml,html,css}" 2> "/dev/null" || true; \
+		find . -type f \( -name "*.md" -o -name "*.json" -o -name "*.jsonc" -o -name "*.yml" -o -name "*.yaml" -o -name "*.html" -o -name "*.css" \) \
+			-not -path "*/OSS/*" -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/node_modules/*" \
+			-not -path "*/var/*" -not -path "*/tmp/*" -not -path "*/build/*" -not -path "*/dist/*" \
+			-not -path "*/target/*" -not -path "*/.cache/*" \
+			-exec prettier --write {} + 2> "/dev/null" || true; \
 	elif command -v npx > "/dev/null" 2>&1; then \
-		npx --yes prettier --write "**/*.{md,json,jsonc,yml,yaml,html,css}" 2> "/dev/null" || true; \
+		find . -type f \( -name "*.md" -o -name "*.json" -o -name "*.jsonc" -o -name "*.yml" -o -name "*.yaml" -o -name "*.html" -o -name "*.css" \) \
+			-not -path "*/OSS/*" -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/node_modules/*" \
+			-not -path "*/var/*" -not -path "*/tmp/*" -not -path "*/build/*" -not -path "*/dist/*" \
+			-not -path "*/target/*" -not -path "*/.cache/*" \
+			-exec npx --yes prettier --write {} + 2> "/dev/null" || true; \
 	fi
 
 lint:
 	echo "🔍 Validando formatação com Prettier..."
 	if command -v prettier > "/dev/null" 2>&1; then \
-		prettier --check "**/*.{md,json,jsonc,yml,yaml,html,css}"; \
+		find . -type f \( -name "*.md" -o -name "*.json" -o -name "*.jsonc" -o -name "*.yml" -o -name "*.yaml" -o -name "*.html" -o -name "*.css" \) \
+			-not -path "*/OSS/*" -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/node_modules/*" \
+			-not -path "*/var/*" -not -path "*/tmp/*" -not -path "*/build/*" -not -path "*/dist/*" \
+			-not -path "*/target/*" -not -path "*/.cache/*" \
+			-exec prettier --check {} +; \
 	elif command -v npx > "/dev/null" 2>&1; then \
-		npx --yes prettier --check "**/*.{md,json,jsonc,yml,yaml,html,css}"; \
+		find . -type f \( -name "*.md" -o -name "*.json" -o -name "*.jsonc" -o -name "*.yml" -o -name "*.yaml" -o -name "*.html" -o -name "*.css" \) \
+			-not -path "*/OSS/*" -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/node_modules/*" \
+			-not -path "*/var/*" -not -path "*/tmp/*" -not -path "*/build/*" -not -path "*/dist/*" \
+			-not -path "*/target/*" -not -path "*/.cache/*" \
+			-exec npx --yes prettier --check {} +; \
 	fi
 
 hooks:

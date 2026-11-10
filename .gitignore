@@ -3,8 +3,109 @@
 # ----------------------------------------------------------------
 
 # ================================================================
-# COMPILED OBJECTS & LIBRARIES
+# OS & FILESYSTEM ARTIFACTS
 # ================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+.nfs*
+*~
+.fuse_hidden*
+
+# ================================================================
+# EDITORS & IDE ARTIFACTS
+# ================================================================
+*.swp
+*.swo
+*.swn
+*~
+\#*\#
+.#*
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.helix/
+
+# ================================================================
+# BUILD OUTPUTS & DEPENDENCY CACHES
+# ================================================================
+bin/
+build/
+dist/
+out/
+target/
+obj/
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+
+# ================================================================
+# TEMPORARY FILES, PATCHES & LOGS
+# ================================================================
+tmp/
+temp/
+var/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+core
+*.core
+vgcore.*
+
+# ================================================================
+# SECRETS, KEYS & LOCAL ENVIRONMENT
+# ================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+*.age
+*.asc
+id_rsa*
+id_ed25519*
+
+# ================================================================
+# PROJECT & STACK SPECIFIC ARTIFACTS
+# ================================================================
+!Project/.vscode/settings.json
 *.d
 *.o
 *.ko
@@ -29,10 +130,6 @@
 *.i*86
 *.x86_64
 *.hex
-
-# ================================================================
-# DEBUG & KERNEL MODULE ARTEFACTS
-# ================================================================
 *.dSYM/
 *.su
 *.idb
@@ -44,24 +141,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-
-# ================================================================
-# PROJECT OUTPUTS & TOOLING
-# ================================================================
 data/
 game.exe
 game
-obj/
 compile_commands.json
-.cache/
-
-# ================================================================
-# OPERATING SYSTEM & EDITOR ARTEFACTS
-# ================================================================
-.DS_Store
-Thumbs.db
-*~
-*.swp
-*.swo
-.vscode/
-.idea/
