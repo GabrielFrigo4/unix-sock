@@ -1,3 +1,8 @@
+.POSIX:
+.SILENT:
+
+MAKEFLAGS += --no-print-directory -s
+
 CC       := gcc
 CFLAGS   := -std=c23 -fstack-protector-strong -fPIE -flto
 WFLAGS   := -Wformat=2 -Wall -Wextra -Wvla -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror -Wno-cpp -Wno-missing-field-initializers -Wno-unknown-warning-option
@@ -27,39 +32,39 @@ all: build
 build: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	@echo "🔗 Ligando objetos e gerando binário '$(TARGET)'..."
-	@$(CC) $(CFLAGS) $(WFLAGS) $(LDFLAGS) $^ -o $@
-	@echo "✅ Executável '$(TARGET)' Gerado com Sucesso!"
+	echo "🔗 Ligando objetos e gerando binário '$(TARGET)'..."
+	$(CC) $(CFLAGS) $(WFLAGS) $(LDFLAGS) $^ -o $@
+	echo "✅ Executável '$(TARGET)' Gerado com Sucesso!"
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(HEADERS)
-	@mkdir -p $(OBJDIR)
-	@echo "⚙️  Compilando $<..."
-	@$(CC) $(CPPFLAGS) $(CFLAGS) $(WFLAGS) -c $< -o $@
+	mkdir -p $(OBJDIR)
+	echo "⚙️  Compilando $<..."
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 .PHONY: run
 run: build
-	@echo "🟢 Iniciando Servidor..."
-	@ADMIN_USER=admin ADMIN_PASS=admin ./$(TARGET)
-	@echo "🛑 Servidor Encerrado."
+	echo "🟢 Iniciando Servidor..."
+	ADMIN_USER=admin ADMIN_PASS=admin ./$(TARGET)
+	echo "🛑 Servidor Encerrado."
 
 .PHONY: update
 update: build
-	@echo "🚀 Enviando arquivos para o servidor Oracle..."
-	@./update-server.sh $(TARGET)
-	@./update-server.sh web
-	@echo "✅ Deploy concluído!"
+	echo "🚀 Enviando arquivos para o servidor Oracle..."
+	./update-server.sh $(TARGET)
+	./update-server.sh web
+	echo "✅ Deploy concluído!"
 
 .PHONY: clean clear
 clean clear:
-	@rm -rf $(OBJDIR) $(TARGET)
-	@echo "🧹 Ambiente Limpo (Objetos e Binários Removidos)."
+	rm -rf $(OBJDIR) $(TARGET)
+	echo "🧹 Ambiente Limpo (Objetos e Binários Removidos)."
 
 .PHONY: erase
 erase: clean
-	@rm -rf $(DATADIR)
-	@echo "🔥 Apagamento Total! (Pasta de Dados também foi Destruída)."
+	rm -rf $(DATADIR)
+	echo "🔥 Apagamento Total! (Pasta de Dados também foi Destruída)."
 
 .PHONY: clangd
 clangd: clean
-	@bear -- $(MAKE) build
-	@echo "📝 Arquivo 'compile_commands.json' atualizado para o Clangd!"
+	bear -- $(MAKE) build
+	echo "📝 Arquivo 'compile_commands.json' atualizado para o Clangd!"

@@ -1,15 +1,13 @@
-#!/bin/sh
+#!/usr/bin/env sh
+# ----------------------------------------------------------------
+# Utility: Install FreeBSD Virtual Machine via Libvirt
+# ----------------------------------------------------------------
+set -eu
 
-# Stop on Error
-set -e
-
-# Setup ISO
 sudo mv "FreeBSD.iso" "/var/lib/libvirt/images/"
 
-# FreeBSD VER
 FREEBSD_VER="$(osinfo-query os | awk '$(1) ~ /^freebsd/ {print $(1)}' | sort -V | tail -n 1)"
 
-# Install VM
 virt-install \
   --connect qemu:///system \
   --name="FreeBSD" \
@@ -24,5 +22,4 @@ virt-install \
   --boot uefi \
   --cdrom="/var/lib/libvirt/images/FreeBSD.iso"
 
-# Remove ISO
 sudo rm "/var/lib/libvirt/images/FreeBSD.iso"

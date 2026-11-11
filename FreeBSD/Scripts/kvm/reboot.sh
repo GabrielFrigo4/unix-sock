@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env sh
+# ----------------------------------------------------------------
+# Utility: Reboot FreeBSD Virtual Machine via Libvirt
+# ----------------------------------------------------------------
+set -eu
 
-# Stop on Error
-set -e
+VM_NAME="${1:-FreeBSD}"
 
-# Reboot VM
-virsh --connect "qemu:///system" reboot FreeBSD
+virsh --connect "qemu:///system" reboot "${VM_NAME}"

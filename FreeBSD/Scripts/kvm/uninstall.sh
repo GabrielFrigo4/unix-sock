@@ -1,10 +1,10 @@
-#!/bin/sh
+#!/usr/bin/env sh
+# ----------------------------------------------------------------
+# Utility: Destroy and Undefine FreeBSD Virtual Machine
+# ----------------------------------------------------------------
+set -eu
 
-# Stop on Error
-set -e
+VM_NAME="${1:-FreeBSD}"
 
-# Close FreeBSD (Daemon)
-virsh --connect "qemu:///system" destroy FreeBSD
-
-# Uninstall VM
-virsh --connect "qemu:///system" undefine FreeBSD --remove-all-storage --nvram
+virsh --connect "qemu:///system" destroy "${VM_NAME}"
+virsh --connect "qemu:///system" undefine "${VM_NAME}" --remove-all-storage --nvram

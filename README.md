@@ -146,8 +146,8 @@ Estes arquivos estão localizados na pasta [`./FreeBSD/Books/`](./FreeBSD/Books/
 
 Scripts utilitários localizados na pasta [`./FreeBSD/Scripts/`](./FreeBSD/Scripts/) para auxiliar na preparação do ambiente.
 
-- **[`install.sh`](./FreeBSD/Scripts/install.sh)**: Script para a preparação das ferramentas essenciais de análise e configuração do ambiente.
+- **[`install.sh`](./FreeBSD/Scripts/kvm/install.sh)**: Script para a preparação das ferramentas essenciais de análise e configuração do ambiente.
 - **[`setup.sh`](./FreeBSD/Scripts/setup.sh)**: Script para configuração inicial do ambiente (variáveis e permissões).
-- **[`connect.sh`](./FreeBSD/Scripts/connect.sh)**: Script para testes de conectividade e sockets.
-- **[`download.sh`](./FreeBSD/Scripts/download.sh)**: Script para baixar recursos adicionais ou PDFs atualizados.
-- **[`uninstall.sh`](./FreeBSD/Scripts/uninstall.sh)**: Script para limpeza e reset do ambiente de estudo.
+- **[`connect.sh`](./FreeBSD/Scripts/kvm/connect.sh)**: Script para testes de conectividade e sockets.
+- **[`download.sh`](./FreeBSD/Scripts/kvm/download.sh)**: Script para baixar recursos adicionais ou PDFs atualizados.
+- **[`uninstall.sh`](./FreeBSD/Scripts/kvm/uninstall.sh)**: Script para limpeza e reset do ambiente de estudo.

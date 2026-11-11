@@ -1,22 +1,18 @@
-#!/bin/sh
+#!/usr/bin/env sh
+# ----------------------------------------------------------------
+# Utility: Connect and Manage FreeBSD Virtual Machine via Libvirt
+# ----------------------------------------------------------------
+set -eu
 
-# Stop on Error
-set -e
+VM_NAME="${1:-FreeBSD}"
 
-# Start FreeBSD (Daemon)
-virsh --connect "qemu:///system" start FreeBSD
-
-# Open VM Window
-virt-viewer --connect "qemu:///system" FreeBSD
-
-# Open VM Console
-virsh --connect "qemu:///system" console FreeBSD
-
-# List VMs IPs
+virsh --connect "qemu:///system" start "${VM_NAME}" 2> "/dev/null" || true
+virt-viewer --connect "qemu:///system" "${VM_NAME}" 2> "/dev/null" || true
+virsh --connect "qemu:///system" console "${VM_NAME}" 2> "/dev/null" || true
 virsh --connect "qemu:///system" net-dhcp-leases default
+virsh --connect "qemu:///system" domifaddr "${VM_NAME}"
 
-# List VM IPs
-virsh --connect "qemu:///system" domifaddr FreeBSD
-
-# Open VM SSH
-ssh "gabriel@$(virsh --connect "qemu:///system" domifaddr FreeBSD | awk '$(3) == "ipv4" {print $(4)}' | cut -d'/' -f1)"
+VM_IP="$(virsh --connect "qemu:///system" domifaddr "${VM_NAME}" | awk '$(3) == "ipv4" {print $(4)}' | cut -d'/' -f1)"
+if [ -n "${VM_IP}" ]; then
+	ssh "gabriel@${VM_IP}"
+fi
